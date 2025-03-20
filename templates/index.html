@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO 실시간 탐지</title>
+</head>
+<body>
+    <h1>YOLO 실시간 객체 탐지</h1>
+    <ul id="data-list"></ul>
+
+    <script>
+        // Server-Sent Events (SSE)를 통해 실시간 데이터 수신
+        const eventSource = new EventSource("/detect_stream");
+
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            // 객체 정보를 HTML 리스트에 추가
+            const listItem = document.createElement("li");
+            listItem.textContent = `객체 ID: ${data.id}, 위도: ${data.latitude}, 경도: ${data.longitude}, 시간: ${data.timestamp}`;
+
+            document.getElementById("data-list").appendChild(listItem);
+        };
+    </script>
+</body>
+</html>
