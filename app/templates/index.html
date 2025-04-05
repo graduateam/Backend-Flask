@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>차량 충돌 예측 시스템</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <!-- 네이버 맵 API -->
+    <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId={{ api_key }}"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+<div class="row">
+    <!-- 왼쪽 패널: 제어 및 정보 -->
+    <div class="col-md-4 left-panel">
+        <h1>차량 충돌 예측 시스템</h1>
+
+        <!-- 시스템 제어와 상태 -->
+        <div class="control-status-row">
+            <div class="card">
+                <div class="card-header">
+                    <h5>System Control</h5>
+                </div>
+                <div class="card-body text-center">
+                    <button id="startBtn" class="btn btn-primary">연결 시작</button>
+                    <button id="stopBtn" class="btn btn-danger">중지</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5>Status</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="status-display">
+                        <span class="status-indicator" id="statusIndicator"></span>
+                        <span class="status-text fw-bold" id="processingStatus">연결 준비됨</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 카메라 피드 -->
+        <div class="card camera-card">
+            <div class="card-header">
+                <h5>Camera</h5>
+            </div>
+            <div class="card-body p-0">
+                <canvas id="videoCanvas" class="video-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- 감지된 객체 -->
+        <div class="card objects-card">
+            <div class="card-header">
+                <h5>감지된 객체 <span class="badge bg-primary" id="objectCount">0</span></h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table table-sm table-striped table-hover mb-0">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>위도</th>
+                            <th>경도</th>
+                            <th>속력(km/h)</th>
+                        </tr>
+                        </thead>
+                        <tbody id="detectedObjectsList">
+                        <!-- 객체 정보 동적 추가 -->
+                        <tr>
+                            <td colspan="4" class="text-center">감지된 객체가 없습니다</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 오른쪽 패널 -->
+    <div class="col-md-8 right-panel">
+        <!-- 지도 카드 -->
+        <div class="card map-card">
+            <div class="card-header">
+                <h5>Map</h5>
+            </div>
+            <div class="card-body">
+                <div id="map" class="map-container">
+                    <div id="map-time" class="map-time"></div>
+                    <div class="map-controls">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showVideoBounds" checked>
+                            <label class="form-check-label" for="showVideoBounds">
+                                카메라 범위 표시
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 충돌 예측 카드 -->
+        <div class="card collision-card">
+            <div class="card-header">
+                <h5>충돌 예측 <span class="badge bg-danger" id="collisionCount">0</span></h5>
+            </div>
+            <div class="card-body">
+                <div id="collisionWarnings" class="collision-warnings">
+                    <div class="alert alert-info">충돌 감지되지 않음</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript 파일 로드 -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 지도 중심 좌표 설정
+    var mapCenter = {
+        lat: {{ map_center.lat }},
+        lng: {{ map_center.lng }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+
+</body>
+</html>
