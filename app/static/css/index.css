@@ -1,0 +1,407 @@
+/* 기본 레이아웃 */
+body, html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Noto Sans KR', sans-serif;
+    box-sizing: border-box;
+}
+
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+
+.container-fluid {
+    height: 100%;
+    padding: 0;
+}
+
+.row {
+    height: 100%;
+    margin: 0;
+}
+
+/* 패널 스타일 */
+.left-panel {
+    height: 100%;
+    width: 35%;
+    padding: 15px;
+    overflow-y: scroll;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 제목 */
+.left-panel h1 {
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    flex-shrink: 0; /* 크기 고정 */
+}
+
+/* 시스템 제어/상태 행 */
+.control-status-row {
+    display: flex;
+    gap: 15px;
+    margin: 15px 0;
+    flex-shrink: 0; /* 크기 고정 */
+}
+
+/* 상태 표시 컨테이너 */
+.status-display {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+}
+
+/* 상태 표시 텍스트 */
+.status-text {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* 상태 표시 원형 인디케이터 */
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+    background-color: #dc3545; /* 기본값: 빨간색(준비됨) */
+}
+
+/* 처리 중일 때의 녹색 인디케이터 */
+.status-indicator.active {
+    background-color: #28a745; /* 녹색(처리 중) */
+    animation: pulse-green 2s infinite; /* 맥동 효과 추가 */
+}
+
+/* 카메라 피드 카드 */
+.camera-card {
+    margin-bottom: 15px;
+    flex: 0 0 55%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 비디오 캔버스 스타일 */
+.video-canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* 비율 유지 */
+}
+
+/* 감지된 객체 카드 */
+.objects-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 0; /* 남은 공간 모두 사용 */
+    min-height: 150px; /* 최소 높이 보장 */
+    overflow: hidden;
+}
+
+/* 객체 목록 테이블 컨테이너 */
+.table-container {
+    overflow-y: auto;
+    flex-grow: 1;
+    height: 100%;
+}
+
+/* 카드 본문 */
+.card-body {
+    padding: 15px;
+    flex-grow: 1;
+    overflow: hidden; /* 기본적으로 오버플로우 숨김 */
+}
+
+/* 카메라 카드 본문 */
+.camera-card .card-body {
+    padding: 0;
+    flex-grow: 1; /* 카드 내부에서 남은 공간 모두 차지 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #000; /* 비디오 배경 검정색 */
+}
+
+/* 테이블 스타일 조정 */
+.table {
+    margin-bottom: 0;
+}
+
+/* 카드 헤더는 고정 */
+.card-header {
+    flex-shrink: 0;
+}
+
+.right-panel {
+    height: 100%;
+    width: 65%;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 오른쪽 패널 컨텐츠 비율 설정 */
+.map-card {
+    flex: 7.5; /* 75% 비율 */
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.map-time {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 1.1em;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    color: #333;
+    pointer-events: none;
+}
+
+.map-controls {
+    font-size: 0.9em;
+    font-weight: bold;
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 100;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 2px 7px;
+    margin-bottom: 10px;
+    border-radius: 2px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    pointer-events: auto; /* 클릭 가능하도록 */
+}
+
+.collision-card {
+    flex: 2.5; /* 25% 비율 */
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 30%;
+    overflow: hidden;
+}
+
+/* 지도 컨테이너 */
+.map-container {
+    width: 100%;
+    height: 100%; /* 높이 100% 유지 */
+    position: relative; /* 컨테이너에 relative 포지션 */
+}
+
+/* 시스템 제어 및 상태 가로 배치 */
+.control-status-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    max-height: 100px;
+}
+
+.control-status-row .card {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* 시스템 제어 카드 본문 중앙 정렬 */
+.control-card .card-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 카드 공통 스타일 */
+.card {
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header {
+    height: 25px;
+    background-color: #f1f3f5;
+    padding: 4px 6px;
+    position: relative;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 15px;
+    flex-grow: 1;
+    overflow: hidden; /* 기본적으로 오버플로우 숨김 */
+}
+
+.map-card .card-body {
+    position: relative;
+    padding: 0;
+    height: 100%;
+}
+
+.map-card .card-body {
+    padding: 0;
+    height: 100%;
+    position: relative; /* relative 유지 */
+    display: flex; /* flex 컨테이너로 설정 */
+    flex-direction: column; /* 세로 방향 정렬 */
+}
+
+/* 충돌 경고 스타일 */
+.collision-warnings {
+    overflow-y: scroll;
+    max-height: 100%; /* 컨테이너 내에서 최대 높이 */
+    padding-right: 5px; /* 스크롤바 공간 확보 */
+}
+
+.collision-alert {
+    padding: 8px 10px; /* 패딩 줄임 */
+    margin-bottom: 6px;
+    border-radius: 4px;
+    animation: fadeOut 5s forwards;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1.05em; /* 글씨 크기 증가 */
+    font-weight: 600; /* 기본 글씨 두께 증가 */
+}
+
+/* 시간 표시 스타일 */
+.alert-time {
+    font-weight: bold;
+    width: 20%; /* 고정 너비 비율 */
+    text-align: center;
+    padding: 4px;
+    margin: 0 5px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* 차량 정보 스타일 */
+.vehicle-info {
+    width: 50%; /* 고정 너비 비율 */
+    text-align: center;
+    padding: 4px;
+    margin: 0 5px;
+}
+
+/* 차량 ID 스타일 */
+.vehicle-id {
+    font-weight: bold;
+    margin: 0 3px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.1);
+    display: inline-block; /* 인라인 블록으로 표시 */
+}
+
+/* 충돌 시간 정보 스타일 */
+.ttc-info {
+    width: 20%; /* 고정 너비 비율 */
+    text-align: center;
+    font-weight: bold;
+    padding: 4px;
+    margin: 0 5px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 버튼 스타일 */
+.btn {
+    font-size: 12px;
+    margin-right: 5px;
+    font-weight: 500;
+}
+
+/* 애니메이션 */
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 녹색 맥동 애니메이션 */
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* 지도 마커 스타일 */
+.vehicle-marker {
+    background-color: #007bff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.vehicle-marker.collision-risk {
+    background-color: #dc3545;
+    border-color: #ffc107;
+    animation: pulse 1s infinite;
+}
+
+.collision-point {
+    background-color: #dc3545;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.6);
+    animation: pulse 1s infinite;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 992px) {
+    .row {
+        flex-direction: column;
+    }
+
+    .left-panel, .right-panel {
+        width: 100%;
+        height: auto;
+    }
+
+    .left-panel {
+        order: 2;
+        border-right: none;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .right-panel {
+        order: 1;
+        height: 70vh;
+    }
+
+    .control-status-row {
+        flex-direction: column;
+    }
+}
