@@ -2,8 +2,12 @@
 API 엔드포인트 정의
 데이터 API 요청을 처리하는 모듈
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
+import cv2
+import numpy as np
+import base64
 from app.services.video_processor import video_processor
+from app.services.streaming import video_stream
 from app.utils.coord_utils import CoordinateTransformer
 from app.utils.logger import setup_logger
 import config
@@ -94,3 +98,31 @@ def stop_processing():
         error_msg = f"처리 중지 오류: {str(e)}"
         logger.error(error_msg)
         return jsonify({'success': False, 'message': error_msg})
+
+@api_bp.route('/receive_camera_frame', methods=['POST'])
+def receive_camera_frame():
+    """
+    라즈베리파이 카메라에서 전송된 프레임을 수신
+    """
+    try:
+        data = request.get_json()
+        if not data or 'frame' not in data:
+            return jsonify({'success': False, 'message': '프레임 데이터가 없습니다'}), 400
+
+        # Base64 인코딩된 프레임 디코딩
+        frame_base64 = data['frame']
+        img_data = base64.b64decode(frame_base64)
+        nparr = np.frombuffer(img_data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if frame is None:
+            return jsonify({'success': False, 'message': '프레임 디코딩 실패'}), 400
+
+        # video_stream 객체에 프레임 업데이트
+        video_stream.update(frame)
+
+        return jsonify({'success': True, 'message': '프레임 수신 완료'})
+
+    except Exception as e:
+        logger.error(f"카메라 프레임 수신 오류: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
