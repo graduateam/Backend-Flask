@@ -41,45 +41,6 @@ body, html {
     flex-shrink: 0; /* 크기 고정 */
 }
 
-/* 시스템 제어/상태 행 */
-.control-status-row {
-    display: flex;
-    gap: 15px;
-    margin: 15px 0;
-    flex-shrink: 0; /* 크기 고정 */
-}
-
-/* 상태 표시 컨테이너 */
-.status-display {
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 5px;
-}
-
-/* 상태 표시 텍스트 */
-.status-text {
-    font-weight: bold;
-    font-size: 1.1em;
-}
-
-/* 상태 표시 원형 인디케이터 */
-.status-indicator {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 10px;
-    background-color: #dc3545; /* 기본값: 빨간색(준비됨) */
-}
-
-/* 처리 중일 때의 녹색 인디케이터 */
-.status-indicator.active {
-    background-color: #28a745; /* 녹색(처리 중) */
-    animation: pulse-green 2s infinite; /* 맥동 효과 추가 */
-}
-
 /* 카메라 피드 카드 */
 .camera-card {
     margin-bottom: 15px;
@@ -204,26 +165,6 @@ body, html {
     position: relative; /* 컨테이너에 relative 포지션 */
 }
 
-/* 시스템 제어 및 상태 가로 배치 */
-.control-status-row {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-    max-height: 100px;
-}
-
-.control-status-row .card {
-    flex: 1;
-    margin-bottom: 0;
-}
-
-/* 시스템 제어 카드 본문 중앙 정렬 */
-.control-card .card-body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
 /* 카드 공통 스타일 */
 .card {
     margin-bottom: 20px;
@@ -344,19 +285,6 @@ body, html {
     100% { transform: scale(1); opacity: 1; }
 }
 
-/* 녹색 맥동 애니메이션 */
-@keyframes pulse-green {
-    0% {
-        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-    }
-    70% {
-        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
-    }
-}
-
 /* 지도 마커 스타일 */
 .vehicle-marker {
     background-color: #007bff;
@@ -399,9 +327,5 @@ body, html {
     .right-panel {
         order: 1;
         height: 70vh;
-    }
-
-    .control-status-row {
-        flex-direction: column;
     }
 }
