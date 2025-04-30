@@ -4,6 +4,7 @@ Flask 애플리케이션 초기화
 """
 from flask import Flask
 from flask_socketio import SocketIO
+from flask_jwt_extended import JWTManager
 from app.utils.logger import setup_logger, setup_root_logger
 
 # 로거 설정
@@ -11,6 +12,7 @@ logger = setup_logger(__name__)
 
 # 전역으로 사용할 socketio 객체 생성
 socketio = SocketIO(cors_allowed_origins="*")
+jwt = JWTManager()
 
 def create_app(config_object='config'):
     """
@@ -31,6 +33,13 @@ def create_app(config_object='config'):
     # 설정 로드
     app.config.from_object(config_object)
     app.secret_key = app.config['SECRET_KEY']
+    
+    # JWT 설정
+    app.config["JWT_SECRET_KEY"] = app.config['JWT_SECRET_KEY']
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)  # 1시간
+    
+    # CORS 설정
+    app.config['CORS_HEADERS'] = 'Content-Type'
 
     # 모듈 등록
     register_extensions(app)
@@ -51,6 +60,9 @@ def register_extensions(app):
     """
     # Socket.IO 초기화
     socketio.init_app(app)
+    
+    # JWT 초기화
+    jwt.init_app(app)
 
 def register_blueprints(app):
     """
@@ -66,6 +78,10 @@ def register_blueprints(app):
     # API 블루프린트
     from app.apis.api import register_api_blueprint
     register_api_blueprint(app)
+    
+    # 인증 API 블루프린트
+    from app.apis.auth_api import register_auth_blueprint
+    register_auth_blueprint(app)
 
     logger.info('모든 블루프린트 등록 완료')
 

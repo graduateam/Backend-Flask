@@ -34,3 +34,8 @@ def video_feed():
     """비디오 스트림 엔드포인트"""
     return Response(generate_frames(),
                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@main_bp.route('/test-login')
+def test_login():
+    """백엔드 API 로그인 테스트 페이지"""
+    return render_template('test_login.html')

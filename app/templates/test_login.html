@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>백엔드 로그인 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #e15501;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>백엔드 API 로그인 테스트</h1>
+    <p>이 페이지는 백엔드 로그인 API가 정상 작동하는지 테스트하기 위한 페이지입니다.</p>
+    
+    <div class="login-form">
+        <input type="text" id="username" placeholder="아이디" value="admin">
+        <input type="password" id="password" placeholder="비밀번호" value="password">
+        <button id="login-btn">로그인</button>
+    </div>
+    
+    <div class="result" id="result">
+        <h3>API 응답 결과</h3>
+        <pre id="response"></pre>
+    </div>
+    
+    <script>
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const resultDiv = document.getElementById('result');
+            const responseElement = document.getElementById('response');
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                // 결과 표시
+                resultDiv.style.display = 'block';
+                responseElement.textContent = JSON.stringify(data, null, 2);
+                
+                // 성공/실패에 따라 스타일 변경
+                if (data.success) {
+                    resultDiv.style.borderColor = 'green';
+                    resultDiv.style.backgroundColor = '#e6ffed';
+                } else {
+                    resultDiv.style.borderColor = 'red';
+                    resultDiv.style.backgroundColor = '#ffebe9';
+                }
+                
+            } catch (error) {
+                resultDiv.style.display = 'block';
+                resultDiv.style.borderColor = 'red';
+                resultDiv.style.backgroundColor = '#ffebe9';
+                responseElement.textContent = `오류 발생: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

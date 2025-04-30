@@ -43,3 +43,7 @@ DEBUG = True
 
 # Flask 앱 비밀키
 SECRET_KEY = 'collision_prediction_secret_key'
+
+# JWT 관련 설정
+JWT_SECRET_KEY = 'smart_road_reflector_jwt_secret'
+JWT_ACCESS_TOKEN_EXPIRES = 3600  # 초 (1시간)
