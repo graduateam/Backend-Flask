@@ -94,3 +94,44 @@ def stop_processing():
         error_msg = f"처리 중지 오류: {str(e)}"
         logger.error(error_msg)
         return jsonify({'success': False, 'message': error_msg})
+    
+@api_bp.route('/cameras')
+def get_cameras():
+    """카메라 목록 조회 엔드포인트"""
+    try:
+        # 테스트용 카메라 데이터 2개 생성
+        cameras = [
+            {
+                "id": 1,
+                "name": "카메라 1",
+                "location": {
+                    "latitude": 37.5676805,
+                    "longitude": 126.9764147
+                },
+                "status": "active"
+            },
+            {
+                "id": 2,
+                "name": "카메라 2",
+                "location": {
+                    "latitude": 37.5656805,
+                    "longitude": 126.9794147
+                },
+                "status": "active"
+            }
+        ]
+        
+        logger.info(f"카메라 목록 조회 API 호출 성공: {len(cameras)}개 카메라 정보 반환")
+        return jsonify({
+            "success": True,
+            "data": cameras
+        })
+    except Exception as e:
+        logger.error(f"카메라 목록 조회 실패: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": {
+                "code": "SERVER_ERROR",
+                "message": "서버 오류가 발생했습니다."
+            }
+        }), 500
