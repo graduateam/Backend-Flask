@@ -2,11 +2,14 @@
 API 엔드포인트 정의
 데이터 API 요청을 처리하는 모듈
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, Response
 from app.services.video_processor import video_processor
 from app.utils.coord_utils import CoordinateTransformer
 from app.utils.logger import setup_logger
+from app.services.streaming import generate_camera_frames
 import config
+import os
+import cv2
 
 # 로거 설정
 logger = setup_logger(__name__)
@@ -133,5 +136,35 @@ def get_cameras():
             "error": {
                 "code": "SERVER_ERROR",
                 "message": "서버 오류가 발생했습니다."
+            }
+        }), 500
+
+@api_bp.route('/video-feed/<int:camera_id>')
+def video_feed(camera_id):
+    """특정 카메라의 비디오 스트림을 제공하는 엔드포인트"""
+    try:
+        video_path = None
+        if camera_id == 1:
+            video_path = os.path.join('app', 'static', 'videos', 'ilsan_12fps.mp4')
+        elif camera_id == 2:
+            video_path = os.path.join('app', 'static', 'videos', 'ilsan.mp4')
+        
+        if not video_path or not os.path.exists(video_path):
+            logger.error(f"카메라 ID {camera_id}에 대한 비디오 파일을 찾을 수 없습니다.")
+            # 기본 에러 프레임 생성
+            return Response(generate_camera_frames(None),
+                          mimetype='multipart/x-mixed-replace; boundary=frame')
+        
+        logger.info(f"카메라 ID {camera_id}에 대한 비디오 스트림 시작: {video_path}")
+        return Response(generate_camera_frames(video_path),
+                       mimetype='multipart/x-mixed-replace; boundary=frame')
+    
+    except Exception as e:
+        logger.error(f"비디오 스트림 생성 오류: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": {
+                "code": "STREAMING_ERROR",
+                "message": "비디오 스트림을 생성하는 중 오류가 발생했습니다."
             }
         }), 500

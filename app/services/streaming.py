@@ -6,6 +6,7 @@ import threading
 import cv2
 import numpy as np
 import base64
+import os
 from app.utils.logger import setup_logger
 
 # 로거 설정
@@ -168,3 +169,82 @@ class VideoStreamManager:
                 time.sleep(0.1)
 
         logger.info("비디오 스트리밍 스레드 종료")
+
+def generate_camera_frames(video_path):
+    """특정 비디오 파일의 프레임을 MJPEG 형식으로 생성"""
+    try:
+        # 비디오 파일이 없는 경우 빈 프레임 생성
+        if video_path is None or not os.path.exists(video_path):
+            while True:
+                empty_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(
+                    empty_frame,
+                    "비디오 파일을 찾을 수 없습니다",
+                    (50, 240),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    (255, 255, 255),
+                    2
+                )
+                ret, buffer = cv2.imencode('.jpg', empty_frame)
+                frame_bytes = buffer.tobytes()
+                yield (b'--frame\r\n'
+                      b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                time.sleep(1 / 10)  # 10 FPS
+                
+        # 비디오 캡처 객체 생성
+        cap = cv2.VideoCapture(video_path)
+        
+        if not cap.isOpened():
+            logger.error(f"비디오 파일을 열 수 없습니다: {video_path}")
+            raise Exception(f"비디오 파일을 열 수 없습니다: {video_path}")
+        
+        # 비디오 FPS 가져오기 (기본값: 25)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps <= 0:
+            fps = 25
+            
+        # 프레임 간격 계산
+        frame_interval = 1.0 / fps
+        
+        while True:
+            # 비디오 프레임 읽기
+            ret, frame = cap.read()
+            
+            # 비디오 끝에 도달하면 다시 시작
+            if not ret:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue
+                
+            # JPEG 형식으로 인코딩
+            ret, buffer = cv2.imencode('.jpg', frame)
+            if not ret:
+                continue
+                
+            # MJPEG 스트림 형식으로 변환
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                  b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                  
+            # 비디오 FPS에 맞게 대기
+            time.sleep(frame_interval)
+    
+    except Exception as e:
+        logger.error(f"비디오 프레임 생성 오류: {str(e)}")
+        # 오류 발생 시 에러 메시지가 포함된 프레임 제공
+        while True:
+            empty_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(
+                empty_frame,
+                f"비디오 에러: {str(e)}",
+                (50, 240),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 0, 255),
+                2
+            )
+            ret, buffer = cv2.imencode('.jpg', empty_frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                  b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            time.sleep(1)  # 낮은 프레임 레이트
