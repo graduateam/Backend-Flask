@@ -12,9 +12,42 @@ $(document).ready(function () {
     // 체크박스 초기 상태 설정
     $('#showVideoBounds').prop('checked', true);
 
+    // 카메라 소스 선택 이벤트 처리
+    $('#cameraSourceSelect').change(function() {
+        var selectedSource = $(this).val();
+        changeVideoSource(selectedSource);
+    });
+
+    // 페이지 로드 시 서버에서 사용 가능한 카메라 소스 목록을 가져오기
+    fetchCameraSources();
+
     // 페이지 로드 시 자동으로 처리 시작
     startProcessing();
 });
+
+// 카메라 소스 목록 가져오기
+function fetchCameraSources() {
+    $.get('/api/camera-sources', function(response) {
+        if (response.success) {
+            var $select = $('#cameraSourceSelect');
+
+            // 소스 목록 갱신 (옵션: 서버에서 템플릿으로 이미 전달되므로 생략 가능)
+            // $select.empty();
+            // response.sources.forEach(function(source) {
+            //     $select.append(`<option value="${source.id}">${source.name}</option>`);
+            // });
+
+            // 현재 소스 선택
+            $select.val(response.current_source);
+
+            console.log('카메라 소스 목록 로드 완료, 현재 소스:', response.current_source);
+        } else {
+            console.error('카메라 소스 목록 로드 실패:', response.message);
+        }
+    }).fail(function(error) {
+        console.error('카메라 소스 요청 실패:', error);
+    });
+}
 
 // 처리 자동 시작 함수
 function startProcessing() {
@@ -30,6 +63,73 @@ function startProcessing() {
         }
     }).fail(function (error) {
         console.error('처리 시작 요청 실패:', error);
+    });
+}
+
+// 비디오 소스 변경 함수
+function changeVideoSource(source) {
+    console.log('비디오 소스 변경 중...', source);
+
+    $.ajax({
+        url: '/api/change-source',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ source: source }),
+        success: function(response) {
+            console.log('소스 변경 응답:', response);
+            if (response.success) {
+                console.log(response.message);
+                // 비디오 경계 업데이트
+                updateVideoBounds();
+            } else {
+                console.error('소스 변경 오류:', response.message);
+            }
+        },
+        error: function(error) {
+            console.error('소스 변경 요청 실패:', error);
+        }
+    });
+}
+
+// 처리 자동 시작 함수
+function startProcessing() {
+    console.log('처리 자동 시작 중...');
+    $.get('/api/start-processing', function (data) {
+        console.log('처리 시작 응답:', data);
+        if (data.success) {
+            // 비디오 경계 업데이트
+            updateVideoBounds();
+            console.log(data.message);
+        } else {
+            console.error('오류:', data.message);
+        }
+    }).fail(function (error) {
+        console.error('처리 시작 요청 실패:', error);
+    });
+}
+
+// 비디오 소스 변경 함수
+function changeVideoSource(source) {
+    console.log('비디오 소스 변경 중...', source);
+
+    $.ajax({
+        url: '/api/change-source',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ source: source }),
+        success: function(response) {
+            console.log('소스 변경 응답:', response);
+            if (response.success) {
+                console.log(response.message);
+                // 비디오 경계 업데이트
+                updateVideoBounds();
+            } else {
+                console.error('소스 변경 오류:', response.message);
+            }
+        },
+        error: function(error) {
+            console.error('소스 변경 요청 실패:', error);
+        }
     });
 }
 
