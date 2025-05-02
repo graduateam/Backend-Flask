@@ -19,8 +19,8 @@ class ObjectDetector:
         device: str - 사용할 장치 ('cuda' 또는 'cpu', None일 경우 자동 감지)
         """
         # 사용할 장치 설정
-        self.device = device if device else ('cuda' if torch.cuda.is_available() else 'cpu')
-
+        # self.device = device if device else ('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("mps")
         # YOLO 모델 로드
         self.model = YOLO(model_path).to(self.device)
 
