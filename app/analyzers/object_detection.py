@@ -3,6 +3,7 @@ YOLO 객체 감지 모델을 사용한 객체 탐지 및 추적
 """
 import cv2
 from ultralytics import YOLO
+import platform
 import torch
 import time
 from app.utils.coord_utils import CoordinateTransformer
@@ -18,9 +19,26 @@ class ObjectDetector:
         world_points: list - 실제 세계 좌표 [(lat1, lon1), ...]
         device: str - 사용할 장치 ('cuda' 또는 'cpu', None일 경우 자동 감지)
         """
-        # 사용할 장치 설정
-        # self.device = device if device else ('cuda' if torch.cuda.is_available() else 'cpu')
-        self.device = torch.device("mps")
+
+        # 운영체제 환경에 따라 장치 선택
+        os_name = platform.system()
+
+        if os_name == "Darwin":  # macOS
+            # MPS 사용 가능 여부 확인
+            if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                self.device = torch.device("mps")
+            else:
+                self.device = torch.device("cpu")
+        elif os_name in ["Windows", "Linux"]:
+            # CUDA 사용 가능 여부 확인
+            if torch.cuda.is_available():
+                self.device = torch.device("cuda")
+            else:
+                self.device = torch.device("cpu")
+        else:
+            # 기타 OS는 CPU 사용
+            self.device = torch.device("cpu")
+
         # YOLO 모델 로드
         self.model = YOLO(model_path).to(self.device)
 
