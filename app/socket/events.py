@@ -79,6 +79,9 @@ def socket_update_thread(app):
         max_retries = 5
         retry_delay = 1.0  # 초기 재시도 대기 시간 (초)
 
+        # 디버깅용 마지막 소스 추적
+        last_source = None
+
         while video_processor.is_socket_running:
             try:
                 current_time = time.time()
@@ -92,23 +95,25 @@ def socket_update_thread(app):
                 last_update_time = current_time
                 update_count += 1
 
+                # 소스 변경 감지하면 로그
+                current_source = video_processor.current_source
+                if current_source != last_source:
+                    logger.info(f"소켓 스레드: 소스 변경 감지 - {current_source}")
+                    last_source = current_source
+
                 # 업데이트 데이터 가져오기
                 map_data = video_processor.get_map_update_data()
 
                 # 데이터가 있으면 클라이언트에 전송
                 if map_data:
-                    # 전송 전 속도 값 확인을 위한 로깅 추가
-                    try:
-                        import json
-                        map_data_dict = json.loads(map_data)  # JSON 문자열을 딕셔너리로 변환
-                        for vehicle in map_data_dict.get('vehicles', []):
-                            logger.debug(
-                                f"전송 전 차량 데이터: ID={vehicle['properties']['id']}, 속도={vehicle['properties']['speed']}, 속도(km/h)={vehicle['properties']['speed_kph']}")
-                    except Exception as e:
-                        logger.error(f"데이터 로깅 중 오류: {str(e)}")
-
                     socketio.emit('map_update', map_data)
 
+                # 주기적으로 처리 상태 로그 출력
+                if update_count % 120 == 0:  # 약 10초마다
+                    frame = video_processor.get_camera_frame(current_source) if current_source.startswith(
+                        "camera_") else None
+                    frame_info = f", 프레임 있음: {frame is not None}" if current_source.startswith("camera_") else ""
+                    logger.info(f"소켓 업데이트 중: 카운트={update_count}, 소스={current_source}{frame_info}")
 
             except Exception as e:
                 error_count += 1

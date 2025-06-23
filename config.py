@@ -28,8 +28,27 @@ DEFAULT_MAP_CENTER = {"lat": WORLD_POINTS[0][0], "lng": WORLD_POINTS[0][1]}
 # YOLO 모델 경로
 MODEL_PATH = 'app/static/yolo_models/0317_best.pt'
 
-# 비디오 소스 설정
-VIDEO_SOURCE = 'app/static/videos/ilsan_12fps.mp4'  # 파일 경로 또는 카메라 ID (0, 1, ...)
+# 카메라 소스 설정
+CAMERA_SOURCES = {
+    "file": "app/static/videos/ilsan_12fps.mp4",  # 저장된 영상
+    "camera_0": 0,  # 라즈베리파이 카메라 (ID 0)
+    "camera_1": 1,  # 두 번째 카메라 (ID 1)
+    # 추가 카메라는 여기에 정의...
+    # "camera_2": 2,
+    # "camera_3": "rtsp://username:password@ip:port/stream"  # RTSP 스트림도 가능
+}
+
+# 카메라 소스 이름
+CAMERA_NAMES = {
+    "file": "저장된 영상",
+    "camera_0": "라즈베리파이 카메라",
+    # "camera_1": "카메라 1",
+    # "camera_2": "카메라 2",
+    # "camera_3": "카메라 3"
+}
+
+# 기본 카메라 소스
+DEFAULT_CAMERA_SOURCE = "file"
 
 # 차량 설정
 CAR_LENGTH = 4.5  # 차량 길이 (미터)
