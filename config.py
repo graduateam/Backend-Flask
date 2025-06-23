@@ -114,3 +114,10 @@ NOTIFICATION_SETTINGS = {
     'high_risk_alert_interval': 1.0,   # 고위험 상황 반복 알림 간격 (초)
     'critical_risk_alert_interval': 0.5 # 치명적 위험 반복 알림 간격 (초)
 }
+
+# Flask 서버가 외부 접근을 허용하도록 설정
+FLASK_HOST = '0.0.0.0'  # 모든 IP에서 접근 허용
+FLASK_PORT = 5000
+
+# ngrok을 위한 추가 헤더 허용
+ALLOWED_HOSTS = ['*']

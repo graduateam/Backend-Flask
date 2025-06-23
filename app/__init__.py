@@ -46,18 +46,20 @@ def create_app(config_object='config'):
 def register_extensions(app):
     """
     확장 모듈 등록
-
-    Parameters:
-    flask_app: Flask - Flask 애플리케이션 인스턴스
     """
     # Socket.IO 초기화
     socketio.init_app(app)
     
-    # CORS 설정 (React Native 앱에서 접근 허용)
-    CORS(app, origins=["*"])  # 개발용, 프로덕션에서는 제한 필요
+    # CORS 설정 (ngrok을 위해 모든 origin 허용)
+    CORS(app, 
+         origins=["*"],  # 모든 도메인 허용
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization"],
+         supports_credentials=True
+    )
     
     logger.info('Socket.IO 및 CORS 설정 완료')
-
+    
 def register_blueprints(app):
     """
     블루프린트 등록
