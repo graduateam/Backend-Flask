@@ -11,6 +11,10 @@ import config
 import cv2
 import numpy as np
 import base64
+import math
+import random
+import time
+from datetime import datetime
 
 # 로거 설정
 logger = setup_logger(__name__)
@@ -33,6 +37,10 @@ transformer = CoordinateTransformer(
     image_points=config.IMAGE_POINTS,
     world_points=config.WORLD_POINTS
 )
+
+# Mock 데이터 생성을 위한 전역 변수
+request_counter = 0  # 7번째마다 충돌 경고 생성용 카운터
+mock_vehicles_cache = {}  # 차량 정보 캐시 (일관성 유지)
 
 @api_bp.route('/status')
 def status():
@@ -218,3 +226,430 @@ def receive_camera_frame():
     except Exception as e:
         logger.error(f"카메라 프레임 수신 오류: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ===========================================
+# 모바일 앱 연동을 위한 Mock API 구현
+# ===========================================
+
+def generate_mock_vehicles(center_lat, center_lng, count=5):
+    """
+    가짜 차량 데이터 생성
+    
+    Parameters:
+    center_lat, center_lng: float - 중심 좌표 (사용자 위치)
+    count: int - 생성할 차량 수
+    
+    Returns:
+    list - 가짜 차량 데이터 목록
+    """
+    global mock_vehicles_cache
+    current_time = datetime.now().isoformat()
+    
+    vehicles = []
+    
+    for i in range(count):
+        vehicle_id = f"vehicle_{i+1}"
+        
+        # 기존 차량이 있으면 위치를 약간 업데이트, 없으면 새로 생성
+        if vehicle_id in mock_vehicles_cache:
+            # 기존 차량 위치에서 약간 이동 (실제 이동 시뮬레이션)
+            prev_vehicle = mock_vehicles_cache[vehicle_id]
+            
+            # 이전 방향으로 약간 이동 (속도에 비례)
+            speed_factor = prev_vehicle['speed'] / 111000  # m/s to degrees 근사치
+            heading_rad = math.radians(prev_vehicle['heading'])
+            
+            lat_offset = speed_factor * math.sin(heading_rad) * 0.1  # 0.1초 간격 가정
+            lng_offset = speed_factor * math.cos(heading_rad) * 0.1
+            
+            new_lat = prev_vehicle['latitude'] + lat_offset
+            new_lng = prev_vehicle['longitude'] + lng_offset
+            
+            # 방향과 속도는 약간 변화
+            new_heading = (prev_vehicle['heading'] + random.uniform(-10, 10)) % 360
+            new_speed = max(5, min(25, prev_vehicle['speed'] + random.uniform(-2, 2)))
+            
+        else:
+            # 새 차량 생성: 중심점 주변 500m 반경 내
+            angle = random.uniform(0, 2 * math.pi)
+            distance = random.uniform(50, 500) / 111000  # 미터를 도 단위로 근사 변환
+            
+            new_lat = center_lat + distance * math.cos(angle)
+            new_lng = center_lng + distance * math.sin(angle)
+            new_heading = random.uniform(0, 360)
+            new_speed = random.uniform(8, 20)  # 8-20 m/s (약 30-70 km/h)
+        
+        vehicle = {
+            "id": vehicle_id,
+            "type": "vehicle",
+            "latitude": new_lat,
+            "longitude": new_lng,
+            "heading": new_heading,
+            "speed": new_speed,
+            "speed_kph": new_speed * 3.6,
+            "timestamp": current_time,
+            "is_collision_risk": False,  # 기본값, 충돌 경고 생성 시 업데이트
+            "ttc": None,
+            "source": "camera_detection"
+        }
+        
+        vehicles.append(vehicle)
+        mock_vehicles_cache[vehicle_id] = vehicle
+    
+    return vehicles
+
+def generate_mock_people(center_lat, center_lng, count=3):
+    """
+    가짜 보행자 데이터 생성
+    
+    Parameters:
+    center_lat, center_lng: float - 중심 좌표
+    count: int - 생성할 보행자 수
+    
+    Returns:
+    list - 가짜 보행자 데이터 목록
+    """
+    current_time = datetime.now().isoformat()
+    people = []
+    
+    for i in range(count):
+        # 중심점 주변 200m 반경 내 (보행자는 차량보다 가까운 범위)
+        angle = random.uniform(0, 2 * math.pi)
+        distance = random.uniform(20, 200) / 111000  # 미터를 도 단위로 근사 변환
+        
+        lat = center_lat + distance * math.cos(angle)
+        lng = center_lng + distance * math.sin(angle)
+        heading = random.uniform(0, 360)
+        speed = random.uniform(0.8, 2.0)  # 보행 속도 0.8-2.0 m/s
+        
+        person = {
+            "id": f"person_{i+1}",
+            "type": "person", 
+            "latitude": lat,
+            "longitude": lng,
+            "heading": heading,
+            "speed": speed,
+            "speed_kph": speed * 3.6,
+            "timestamp": current_time,
+            "is_collision_risk": False,
+            "ttc": None
+        }
+        
+        people.append(person)
+    
+    return people
+
+def generate_mock_collision_warning(vehicles):
+    """
+    가짜 충돌 경고 생성 (7번째 요청마다)
+    
+    Parameters:
+    vehicles: list - 차량 목록
+    
+    Returns:
+    dict - 충돌 경고 데이터 또는 None
+    """
+    if not vehicles:
+        return None
+    
+    # 임의의 차량 선택
+    target_vehicle = random.choice(vehicles)
+    
+    # 충돌 위험으로 마킹
+    target_vehicle["is_collision_risk"] = True
+    
+    # 상대 방향 목록
+    relative_directions = ["front", "front-left", "front-right", "left", "right"]
+    
+    # Mock 충돌 경고 데이터
+    warning = {
+        "objectId": target_vehicle["id"],
+        "objectType": "vehicle",
+        "direction": target_vehicle["heading"],
+        "relativeDirection": random.choice(relative_directions),
+        "speed": target_vehicle["speed"],
+        "speed_kph": target_vehicle["speed_kph"],
+        "distance": random.uniform(15, 50),  # 15-50m
+        "ttc": random.uniform(1.5, 3.5),     # 1.5-3.5초
+        "severity": random.choice(["medium", "high", "critical"]),
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    return warning
+
+def calculate_mock_motion(request_data):
+    """
+    가짜 모션 데이터 계산 (사용자의 속도/방향)
+    
+    Parameters:
+    request_data: dict - 요청 데이터
+    
+    Returns:
+    dict - 계산된 모션 정보
+    """
+    # TODO: 실제 구현 시 이 함수를 실제 로직으로 교체
+    # 실제로는 이전 위치와 현재 위치를 비교하여 속도/방향 계산
+    
+    return {
+        "speed": random.uniform(0, 16.67),  # 0-60 km/h in m/s
+        "speed_kph": random.uniform(0, 60),
+        "heading": random.uniform(0, 360)
+    }
+
+@api_bp.route('/location/update', methods=['POST'])
+def location_update():
+    """
+    통합 위치 업데이트 API (Mock 구현)
+    
+    TODO: 실제 구현 시 다음 부분들을 실제 로직으로 교체:
+    1. calculate_mock_motion() → 실제 속도/방향 계산 로직
+    2. generate_mock_vehicles() → 실제 카메라 감지 차량 데이터
+    3. generate_mock_people() → 실제 카메라 감지 보행자 데이터  
+    4. generate_mock_collision_warning() → 실제 충돌 예측 로직
+    """
+    global request_counter
+    
+    try:
+        # 요청 데이터 검증
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "요청 데이터가 없습니다"
+            }), 400
+        
+        # 필수 필드 검증
+        required_fields = ['device_id', 'timestamp', 'location', 'device_info']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    "success": False,
+                    "message": f"필수 필드 누락: {field}"
+                }), 400
+        
+        # 위치 정보 추출
+        location = data['location']
+        user_lat = location['latitude']
+        user_lng = location['longitude']
+        
+        # 요청 카운터 증가
+        request_counter += 1
+        
+        # ===========================================
+        # TODO: 실제 구현 시 아래 Mock 함수들을 교체
+        # ===========================================
+        
+        # 1. 사용자 모션 계산 (Mock)
+        calculated_motion = calculate_mock_motion(data)
+        
+        # 2. 주변 차량 데이터 생성 (Mock) 
+        mock_vehicles = generate_mock_vehicles(user_lat, user_lng, count=5)
+        
+        # 3. 주변 보행자 데이터 생성 (Mock)
+        mock_people = generate_mock_people(user_lat, user_lng, count=3)
+        
+        # 4. 충돌 경고 생성 (7번째 요청마다)
+        collision_warning_data = None
+        has_warning = False
+        
+        if request_counter % 7 == 0:  # 7번째마다 충돌 경고
+            collision_warning_data = generate_mock_collision_warning(mock_vehicles)
+            has_warning = collision_warning_data is not None
+            
+            logger.info(f"충돌 경고 생성됨 (요청 #{request_counter}): {collision_warning_data}")
+        
+        # ===========================================
+        # 응답 데이터 구성
+        # ===========================================
+        
+        response = {
+            "success": True,
+            "message": "위치 정보 업데이트 완료 (Mock 모드)",
+            "server_timestamp": datetime.now().isoformat(),
+            "assigned_id": f"mobile_user_{data['device_id']}",
+            "calculated_motion": calculated_motion,
+            "nearby_vehicles": {
+                "vehicles": mock_vehicles,
+                "total_count": len(mock_vehicles)
+            },
+            "nearby_people": {
+                "people": mock_people,
+                "total_count": len(mock_people)
+            },
+            "collision_warning": {
+                "hasWarning": has_warning,
+                "warning": collision_warning_data if has_warning else None
+            }
+        }
+        
+        # 디버그 로그
+        logger.info(f"위치 업데이트 요청 처리 완료 (#{request_counter}): "
+                   f"디바이스={data['device_id']}, 위치=({user_lat:.6f}, {user_lng:.6f}), "
+                   f"차량={len(mock_vehicles)}대, 보행자={len(mock_people)}명, "
+                   f"충돌경고={'있음' if has_warning else '없음'}")
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        error_msg = f"위치 업데이트 처리 오류: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            "success": False,
+            "message": error_msg
+        }), 500
+
+
+# ===========================================
+# 개별 API들 (참고용 - 필요시 구현)
+# ===========================================
+
+@api_bp.route('/vehicles/nearby', methods=['GET'])
+def get_nearby_vehicles():
+    """
+    주변 차량 조회 API (Mock 구현)
+    
+    TODO: 실제 구현 시 실제 차량 감지 로직으로 교체
+    """
+    try:
+        # 쿼리 파라미터 추출
+        lat = float(request.args.get('latitude', 37.5666102))
+        lng = float(request.args.get('longitude', 126.9783881))
+        radius = int(request.args.get('radius', 500))
+        
+        # Mock 차량 데이터 생성
+        mock_vehicles = generate_mock_vehicles(lat, lng, count=5)
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "vehicles": mock_vehicles,
+                "timestamp": datetime.now().isoformat(),
+                "total_count": len(mock_vehicles)
+            }
+        })
+        
+    except Exception as e:
+        error_msg = f"주변 차량 조회 오류: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            "success": False,
+            "message": error_msg
+        }), 500
+
+@api_bp.route('/people/nearby', methods=['GET'])  
+def get_nearby_people():
+    """
+    주변 보행자 조회 API (Mock 구현)
+    
+    TODO: 실제 구현 시 실제 보행자 감지 로직으로 교체
+    """
+    try:
+        # 쿼리 파라미터 추출
+        lat = float(request.args.get('latitude', 37.5666102))
+        lng = float(request.args.get('longitude', 126.9783881))
+        radius = int(request.args.get('radius', 500))
+        
+        # Mock 보행자 데이터 생성
+        mock_people = generate_mock_people(lat, lng, count=3)
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "people": mock_people,
+                "timestamp": datetime.now().isoformat(),
+                "total_count": len(mock_people)
+            }
+        })
+        
+    except Exception as e:
+        error_msg = f"주변 보행자 조회 오류: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            "success": False,
+            "message": error_msg
+        }), 500
+
+@api_bp.route('/collision/warning', methods=['POST'])
+def get_collision_warning():
+    """
+    충돌 경고 조회 API (Mock 구현)
+    
+    TODO: 실제 구현 시 실제 충돌 예측 로직으로 교체
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "message": "요청 데이터가 없습니다"
+            }), 400
+        
+        # Mock 충돌 경고 생성 (30% 확률)
+        has_warning = random.random() < 0.3
+        warning_data = None
+        
+        if has_warning:
+            # 임시 차량 데이터로 경고 생성
+            mock_vehicles = generate_mock_vehicles(
+                data.get('latitude', 37.5666102),
+                data.get('longitude', 126.9783881),
+                count=1
+            )
+            warning_data = generate_mock_collision_warning(mock_vehicles)
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "warning": warning_data,
+                "hasWarning": has_warning
+            }
+        })
+        
+    except Exception as e:
+        error_msg = f"충돌 경고 조회 오류: {str(e)}"
+        logger.error(error_msg)
+        return jsonify({
+            "success": False,
+            "message": error_msg
+        }), 500
+
+
+# ===========================================
+# 실제 구현 시 교체할 함수들의 인터페이스 예시
+# ===========================================
+
+"""
+실제 구현 시 다음과 같은 함수들로 교체하면 됩니다:
+
+def calculate_real_motion(device_id, current_location, timestamp):
+    '''
+    실제 사용자 모션 계산
+    - 이전 위치 데이터와 비교하여 실제 속도/방향 계산
+    - 데이터베이스나 메모리에서 위치 이력 조회
+    '''
+    pass
+
+def get_real_nearby_vehicles(lat, lng, radius):
+    '''
+    실제 카메라 감지 차량 데이터 조회
+    - YOLO 객체 감지 결과에서 차량 정보 추출
+    - 좌표 변환 적용하여 GPS 좌표로 변환
+    '''
+    pass
+
+def get_real_nearby_people(lat, lng, radius):
+    '''
+    실제 카메라 감지 보행자 데이터 조회
+    - YOLO 객체 감지 결과에서 보행자 정보 추출
+    '''
+    pass
+
+def predict_real_collision(user_location, nearby_objects):
+    '''
+    실제 충돌 예측 로직
+    - CollisionPredictor 클래스 활용
+    - 벡터 기반 충돌 예측 수행
+    '''
+    pass
+"""

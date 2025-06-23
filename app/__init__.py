@@ -4,6 +4,7 @@ Flask 애플리케이션 초기화
 """
 from flask import Flask
 from flask_socketio import SocketIO
+from flask_cors import CORS
 from app.utils.logger import setup_logger, setup_root_logger
 
 # 로거 설정
@@ -51,6 +52,11 @@ def register_extensions(app):
     """
     # Socket.IO 초기화
     socketio.init_app(app)
+    
+    # CORS 설정 (React Native 앱에서 접근 허용)
+    CORS(app, origins=["*"])  # 개발용, 프로덕션에서는 제한 필요
+    
+    logger.info('Socket.IO 및 CORS 설정 완료')
 
 def register_blueprints(app):
     """
