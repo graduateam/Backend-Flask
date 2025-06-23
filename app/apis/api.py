@@ -890,3 +890,124 @@ def predict_real_collision(user_location, nearby_objects):
     '''
     pass
 """
+# app/apis/api.py에 추가할 엔드포인트들
+
+@api_bp.route('/health')
+def health_check():
+    """서버 헬스 체크 엔드포인트"""
+    try:
+        import platform
+        import psutil
+        import time
+        
+        # 시스템 정보 수집
+        system_info = {
+            'status': 'healthy',
+            'timestamp': time.time(),
+            'server': {
+                'platform': platform.system(),
+                'python_version': platform.python_version(),
+                'cpu_usage': psutil.cpu_percent(interval=1),
+                'memory_usage': psutil.virtual_memory().percent,
+                'disk_usage': psutil.disk_usage('/').percent if platform.system() != 'Windows' else psutil.disk_usage('C:\\').percent
+            },
+            'application': {
+                'video_processor_initialized': video_processor._is_initialized,
+                'is_processing': video_processor.is_processing,
+                'current_source': video_processor.current_source
+            }
+        }
+        
+        # 외부 접근 정보 추가
+        from flask import request
+        system_info['connection'] = {
+            'client_ip': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent', 'Unknown'),
+            'request_method': request.method
+        }
+        
+        return jsonify(system_info)
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': time.time()
+        }), 500
+
+@api_bp.route('/server-info')
+def server_info():
+    """서버 접속 정보 제공"""
+    import socket
+    
+    try:
+        # 내부 IP 주소 획득
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        
+        # 설정에서 공인 IP 정보 가져오기
+        public_ip = config.PUBLIC_IP if hasattr(config, 'PUBLIC_IP') else 'not_configured'
+        public_port = config.PUBLIC_PORT if hasattr(config, 'PUBLIC_PORT') else config.SERVER_PORT
+        
+        server_info = {
+            'hostname': hostname,
+            'local_ip': local_ip,
+            'local_port': config.SERVER_PORT,
+            'public_ip': public_ip,
+            'public_port': public_port,
+            'endpoints': {
+                'local_access': f"http://{local_ip}:{config.SERVER_PORT}",
+                'public_access': f"http://{public_ip}:{public_port}" if public_ip != 'not_configured' else 'not_configured'
+            },
+            'websocket': {
+                'local': f"ws://{local_ip}:{config.SERVER_PORT}",
+                'public': f"ws://{public_ip}:{public_port}" if public_ip != 'not_configured' else 'not_configured'
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': server_info
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@api_bp.route('/ping')
+def ping():
+    """간단한 핑 테스트"""
+    return jsonify({
+        'pong': True,
+        'timestamp': time.time(),
+        'server': 'collision-prediction-backend'
+    })
+
+# CORS preflight 요청 처리
+@api_bp.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "*")
+        response.headers.add('Access-Control-Allow-Methods', "*")
+        return response
+
+# 모든 응답에 보안 헤더 추가
+@api_bp.after_request
+def after_request(response):
+    # CORS 헤더 (Flask-CORS와 중복되지 않도록 조심)
+    if not response.headers.get('Access-Control-Allow-Origin'):
+        response.headers.add('Access-Control-Allow-Origin', '*')
+    
+    # 보안 헤더 추가
+    response.headers.add('X-Content-Type-Options', 'nosniff')
+    response.headers.add('X-Frame-Options', 'DENY')
+    response.headers.add('X-XSS-Protection', '1; mode=block')
+    
+    # 캐시 제어 (API 응답은 캐시하지 않음)
+    response.headers.add('Cache-Control', 'no-cache, no-store, must-revalidate')
+    response.headers.add('Pragma', 'no-cache')
+    response.headers.add('Expires', '0')
+    
+    return response

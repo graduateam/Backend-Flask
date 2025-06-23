@@ -1,6 +1,18 @@
 """
-애플리케이션 설정 파일
+애플리케이션 설정 파일 - 외부 접근 지원
 """
+import os
+
+# 서버 설정
+SERVER_HOST = os.environ.get('FLASK_HOST', '0.0.0.0')  # 모든 인터페이스에서 접근 허용
+SERVER_PORT = int(os.environ.get('FLASK_PORT', 5000))
+
+# 외부 접근을 위한 공인 IP 설정 (환경 변수에서 설정)
+PUBLIC_IP = os.environ.get('PUBLIC_IP', 'localhost')  # 공인 IP 주소
+PUBLIC_PORT = int(os.environ.get('PUBLIC_PORT', 5000))  # 포트 포워딩된 포트
+
+# CORS 설정
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '*')  # 허용할 도메인 (쉼표로 구분)
 
 # 지도 API 키 설정
 MAP_API_KEY = "19qidy68bi"  # 네이버맵 클라이언트 ID
@@ -100,11 +112,20 @@ PERFORMANCE_SETTINGS = {
     'enable_gpu_acceleration': True    # GPU 가속 활성화
 }
 
-# 디버그 모드
-DEBUG = True
+# 디버그 모드 (환경 변수로 제어 가능)
+DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
 
-# Flask 앱 비밀키
-SECRET_KEY = 'collision_prediction_secret_key'
+# Flask 앱 비밀키 (환경 변수에서 설정 권장)
+SECRET_KEY = os.environ.get('SECRET_KEY', 'collision_prediction_secret_key_change_in_production')
+
+# 보안 설정
+SECURITY_SETTINGS = {
+    'enable_rate_limiting': True,       # API 호출 제한 활성화
+    'max_requests_per_minute': 60,      # 분당 최대 요청 수
+    'enable_ip_whitelist': False,       # IP 화이트리스트 (필요시 활성화)
+    'allowed_ips': [],                  # 허용할 IP 목록
+    'enable_api_key_auth': False,       # API 키 인증 (필요시 활성화)
+}
 
 # 알림 설정
 NOTIFICATION_SETTINGS = {
@@ -113,4 +134,11 @@ NOTIFICATION_SETTINGS = {
     'alert_duration': 5.0,             # 알림 지속 시간 (초)
     'high_risk_alert_interval': 1.0,   # 고위험 상황 반복 알림 간격 (초)
     'critical_risk_alert_interval': 0.5 # 치명적 위험 반복 알림 간격 (초)
+}
+
+# 헬스 체크 설정
+HEALTH_CHECK = {
+    'enable_health_endpoint': True,     # /health 엔드포인트 활성화
+    'check_database': False,            # 데이터베이스 상태 확인 (DB 사용 시)
+    'check_external_services': True,    # 외부 서비스 상태 확인
 }

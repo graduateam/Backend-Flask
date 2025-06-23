@@ -1,11 +1,12 @@
 """
-Flask 애플리케이션 초기화
+Flask 애플리케이션 초기화 - 외부 접근 및 CORS 지원
 애플리케이션 팩토리 패턴 구현
 """
 from flask import Flask
 from flask_socketio import SocketIO
 from flask_cors import CORS
 from app.utils.logger import setup_logger, setup_root_logger
+import os
 
 # 로거 설정
 logger = setup_logger(__name__)
@@ -45,18 +46,44 @@ def create_app(config_object='config'):
 
 def register_extensions(app):
     """
-    확장 모듈 등록
+    확장 모듈 등록 - 외부 접근 지원
 
     Parameters:
     flask_app: Flask - Flask 애플리케이션 인스턴스
     """
-    # Socket.IO 초기화
-    socketio.init_app(app)
+    # Socket.IO 초기화 - 외부 접근 허용
+    socketio.init_app(
+        app,
+        cors_allowed_origins="*",  # 모든 도메인에서 접근 허용
+        async_mode='threading',    # 스레딩 모드 사용
+        ping_timeout=60,           # 연결 타임아웃 증가
+        ping_interval=25           # 핑 간격 설정
+    )
     
-    # CORS 설정 (React Native 앱에서 접근 허용)
-    CORS(app, origins=["*"])  # 개발용, 프로덕션에서는 제한 필요
+    # CORS 설정 - 외부 접근 허용
+    allowed_origins = []
     
-    logger.info('Socket.IO 및 CORS 설정 완료')
+    # 환경 변수에서 허용된 도메인 읽기
+    allowed_origins_env = os.environ.get('ALLOWED_ORIGINS', '*')
+    
+    if allowed_origins_env == '*':
+        # 개발 모드: 모든 도메인 허용
+        allowed_origins = "*"
+        logger.warning("⚠️  모든 도메인에서의 접근이 허용되었습니다. 프로덕션 환경에서는 특정 도메인만 허용하세요.")
+    else:
+        # 프로덕션 모드: 특정 도메인만 허용
+        allowed_origins = allowed_origins_env.split(',')
+        logger.info(f"허용된 도메인: {allowed_origins}")
+    
+    CORS(
+        app, 
+        origins=allowed_origins,
+        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allow_headers=['Content-Type', 'Authorization'],
+        supports_credentials=True
+    )
+    
+    logger.info('Socket.IO 및 CORS 설정 완료 (외부 접근 허용)')
 
 def register_blueprints(app):
     """
