@@ -23,20 +23,29 @@
                 <h5>카메라 소스 선택</h5>
             </div>
             <div class="card-body p-2">
-                <div class="d-flex justify-content-center">
-                    <select id="cameraSourceSelect" class="form-select">
+                <div class="d-flex justify-content-between align-items-center">
+                    <select id="cameraSourceSelect" class="form-select me-2">
                         {% for src_id, src_name in camera_sources.items() %}
                         <option value="{{ src_id }}">{{ src_name }}</option>
                         {% endfor %}
                     </select>
+                    <button id="refreshSourcesBtn" class="btn btn-outline-secondary btn-sm" title="소스 새로고침">
+                        🔄
+                    </button>
                 </div>
             </div>
         </div>
 
+        <!-- 전체 위험도 표시 영역 (JavaScript에서 동적 생성) -->
+
         <!-- 카메라 피드 -->
         <div class="card camera-card">
-            <div class="card-header">
-                <h5>Camera</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>Camera Feed</h5>
+                <div class="d-flex align-items-center">
+                    <span id="processingStatus" class="badge badge-secondary me-2">대기중</span>
+                    <button id="toggleProcessingBtn" class="btn btn-outline-primary btn-sm">시작</button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <canvas id="videoCanvas" class="video-canvas"></canvas>
@@ -45,8 +54,14 @@
 
         <!-- 감지된 객체 -->
         <div class="card objects-card">
-            <div class="card-header">
-                <h5>감지된 객체 <span class="badge bg-primary" id="objectCount">0</span></h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>감지된 객체</h5>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary me-2" id="objectCount">0</span>
+                    <button id="exportDataBtn" class="btn btn-outline-success btn-sm" title="데이터 내보내기">
+                        📊
+                    </button>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-container">
@@ -57,15 +72,69 @@
                             <th>위도</th>
                             <th>경도</th>
                             <th>속력(km/h)</th>
+                            <th>위험도</th>
                         </tr>
                         </thead>
                         <tbody id="detectedObjectsList">
-                        <!-- 객체 정보 동적 추가 -->
                         <tr>
-                            <td colspan="4" class="text-center">감지된 객체가 없습니다</td>
+                            <td colspan="5" class="text-center">감지된 객체가 없습니다</td>
                         </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 위험도 설정 패널-->
+        <div class="card mb-3" id="riskSettingsCard" style="display: none;">
+            <div class="card-header">
+                <h5>위험도 설정</h5>
+            </div>
+            <div class="card-body p-3">
+                <div class="mb-3">
+                    <label for="riskThresholdSlider" class="form-label">
+                        위험도 임계값: <span id="riskThresholdValue">60</span>점
+                    </label>
+                    <input type="range" class="form-range" id="riskThresholdSlider"
+                           min="30" max="90" value="60" step="5">
+                </div>
+
+                <div class="mb-2">
+                    <small class="text-muted">가중치 설정:</small>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <label class="form-label">상대속도</label>
+                        <input type="range" class="form-range" id="speedWeightSlider"
+                               min="0.1" max="0.6" value="0.35" step="0.05">
+                        <small id="speedWeightValue">35%</small>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">거리</label>
+                        <input type="range" class="form-range" id="distanceWeightSlider"
+                               min="0.1" max="0.6" value="0.30" step="0.05">
+                        <small id="distanceWeightValue">30%</small>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-6">
+                        <label class="form-label">방향수렴</label>
+                        <input type="range" class="form-range" id="directionWeightSlider"
+                               min="0.1" max="0.4" value="0.20" step="0.05">
+                        <small id="directionWeightValue">20%</small>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">시간기반</label>
+                        <input type="range" class="form-range" id="timeWeightSlider"
+                               min="0.05" max="0.3" value="0.15" step="0.05">
+                        <small id="timeWeightValue">15%</small>
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button id="applySettingsBtn" class="btn btn-primary btn-sm">적용</button>
+                    <button id="resetSettingsBtn" class="btn btn-secondary btn-sm">기본값</button>
                 </div>
             </div>
         </div>
@@ -75,8 +144,17 @@
     <div class="col-md-8 right-panel">
         <!-- 지도 카드 -->
         <div class="card map-card">
-            <div class="card-header">
-                <h5>Map</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>실시간 지도</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <button id="toggleSettingsBtn" class="btn btn-outline-secondary btn-sm" title="설정">
+                        ⚙️
+                    </button>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="autoZoomEnabled" checked>
+                        <label class="form-check-label" for="autoZoomEnabled">자동 줌</label>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <div id="map" class="map-container">
@@ -88,6 +166,37 @@
                                 카메라 범위 표시
                             </label>
                         </div>
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" id="showVehiclePaths" checked>
+                            <label class="form-check-label" for="showVehiclePaths">
+                                차량 경로 표시
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 위험도 범례 -->
+                    <div class="risk-legend">
+                        <div class="legend-title">위험도</div>
+                        <div class="legend-item">
+                            <span class="legend-color safe"></span>
+                            <span>안전 (0-40)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color low"></span>
+                            <span>낮음 (40-55)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color medium"></span>
+                            <span>중간 (55-70)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color high"></span>
+                            <span>높음 (70-85)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color critical"></span>
+                            <span>치명적 (85+)</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -95,8 +204,18 @@
 
         <!-- 충돌 예측 카드 -->
         <div class="card collision-card">
-            <div class="card-header">
-                <h5>충돌 예측 <span class="badge bg-danger" id="collisionCount">0</span></h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>충돌 예측 경고</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-danger" id="collisionCount">0</span>
+                    <button id="clearWarningsBtn" class="btn btn-outline-danger btn-sm" title="경고 지우기">
+                        🗑️
+                    </button>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="soundAlerts" checked>
+                        <label class="form-check-label" for="soundAlerts">음성알림</label>
+                    </div>
+                </div>
             </div>
             <div class="card-body">
                 <div id="collisionWarnings" class="collision-warnings">
@@ -106,6 +225,32 @@
         </div>
     </div>
 </div>
+
+<!-- 모달: 위험도 세부 정보 -->
+<div class="modal fade" id="riskDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">위험도 세부 분석</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="riskDetailsContent">
+                    <!-- 동적으로 생성될 위험도 세부 정보 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 오디오 알림을 위한 숨겨진 오디오 요소 -->
+<audio id="alertSound" preload="auto">
+    <source src="/static/sounds/alert.mp3" type="audio/mpeg">
+    <source src="/static/sounds/alert.wav" type="audio/wav">
+</audio>
 
 <!-- JavaScript 파일 로드 -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -119,6 +264,201 @@
 </script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+
+<!-- 추가 기능을 위한 JavaScript -->
+<script>
+$(document).ready(function() {
+    // 설정 토글 버튼
+    $('#toggleSettingsBtn').click(function() {
+        $('#riskSettingsCard').toggle();
+    });
+
+    // 처리 시작/중지 토글 버튼
+    $('#toggleProcessingBtn').click(function() {
+        var $btn = $(this);
+        var $status = $('#processingStatus');
+
+        if ($btn.text() === '시작') {
+            // 처리 시작
+            $.get('/api/start-processing', function(data) {
+                if (data.success) {
+                    $btn.text('중지').removeClass('btn-outline-primary').addClass('btn-outline-danger');
+                    $status.text('처리중').removeClass('badge-secondary').addClass('badge-success');
+                } else {
+                    alert('처리 시작 실패: ' + data.message);
+                }
+            });
+        } else {
+            // 처리 중지
+            $.get('/api/stop-processing', function(data) {
+                if (data.success) {
+                    $btn.text('시작').removeClass('btn-outline-danger').addClass('btn-outline-primary');
+                    $status.text('중지됨').removeClass('badge-success').addClass('badge-warning');
+                } else {
+                    alert('처리 중지 실패: ' + data.message);
+                }
+            });
+        }
+    });
+
+    // 소스 새로고침 버튼
+    $('#refreshSourcesBtn').click(function() {
+        fetchCameraSources();
+    });
+
+    // 데이터 내보내기 버튼
+    $('#exportDataBtn').click(function() {
+        $.get('/api/export-risk-data', function(data) {
+            if (data.success) {
+                // CSV 다운로드
+                var blob = new Blob([data.data], { type: 'text/csv' });
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = data.filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('데이터 내보내기 실패: ' + data.message);
+            }
+        });
+    });
+
+    // 경고 지우기 버튼
+    $('#clearWarningsBtn').click(function() {
+        $('#collisionWarnings').html('<div class="alert alert-info">충돌 감지되지 않음</div>');
+        $('#collisionCount').text('0');
+    });
+
+    // 위험도 임계값 슬라이더
+    $('#riskThresholdSlider').on('input', function() {
+        $('#riskThresholdValue').text($(this).val());
+    });
+
+    // 가중치 슬라이더들
+    $('#speedWeightSlider').on('input', function() {
+        $('#speedWeightValue').text(Math.round($(this).val() * 100) + '%');
+    });
+
+    $('#distanceWeightSlider').on('input', function() {
+        $('#distanceWeightValue').text(Math.round($(this).val() * 100) + '%');
+    });
+
+    $('#directionWeightSlider').on('input', function() {
+        $('#directionWeightValue').text(Math.round($(this).val() * 100) + '%');
+    });
+
+    $('#timeWeightSlider').on('input', function() {
+        $('#timeWeightValue').text(Math.round($(this).val() * 100) + '%');
+    });
+
+    // 설정 적용 버튼
+    $('#applySettingsBtn').click(function() {
+        var settings = {
+            risk_threshold: parseFloat($('#riskThresholdSlider').val()),
+            weights: {
+                relative_speed: parseFloat($('#speedWeightSlider').val()),
+                distance: parseFloat($('#distanceWeightSlider').val()),
+                direction_convergence: parseFloat($('#directionWeightSlider').val()),
+                time_based: parseFloat($('#timeWeightSlider').val())
+            }
+        };
+
+        // 가중치 합 확인
+        var totalWeight = Object.values(settings.weights).reduce((a, b) => a + b, 0);
+        if (Math.abs(totalWeight - 1.0) > 0.01) {
+            alert('가중치 합이 100%가 되어야 합니다. 현재: ' + Math.round(totalWeight * 100) + '%');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/risk-settings',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(settings),
+            success: function(data) {
+                if (data.success) {
+                    alert('설정이 적용되었습니다.');
+                } else {
+                    alert('설정 적용 실패: ' + data.message);
+                }
+            },
+            error: function() {
+                alert('설정 적용 중 오류가 발생했습니다.');
+            }
+        });
+    });
+
+    // 기본값 복원 버튼
+    $('#resetSettingsBtn').click(function() {
+        $('#riskThresholdSlider').val(60);
+        $('#speedWeightSlider').val(0.35);
+        $('#distanceWeightSlider').val(0.30);
+        $('#directionWeightSlider').val(0.20);
+        $('#timeWeightSlider').val(0.15);
+
+        // 표시값 업데이트
+        $('#riskThresholdValue').text('60');
+        $('#speedWeightValue').text('35%');
+        $('#distanceWeightValue').text('30%');
+        $('#directionWeightValue').text('20%');
+        $('#timeWeightValue').text('15%');
+    });
+});
+
+// 음성 알림 함수
+function playAlertSound(riskLevel) {
+    if (!$('#soundAlerts').is(':checked')) return;
+
+    var audio = document.getElementById('alertSound');
+    if (audio && riskLevel === 'high' || riskLevel === 'critical') {
+        audio.play().catch(function(e) {
+            console.log('오디오 재생 실패:', e);
+        });
+    }
+}
+</script>
+
+<!-- 추가 CSS for 범례 -->
+<style>
+.risk-legend {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    font-size: 12px;
+    z-index: 100;
+}
+
+.legend-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.legend-color {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+}
+
+.legend-color.safe { background-color: #28a745; }
+.legend-color.low { background-color: #ffc107; }
+.legend-color.medium { background-color: #fd7e14; }
+.legend-color.high { background-color: #dc3545; }
+.legend-color.critical { background-color: #6f42c1; }
+</style>
 
 </body>
 </html>
