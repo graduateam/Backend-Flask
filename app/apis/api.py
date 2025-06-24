@@ -634,19 +634,23 @@ def calculate_mock_motion(request_data):
         "heading": random.uniform(0, 360)
     }
 
+# 기존 Mock 함수들은 주석 처리하고 실제 구현으로 교체
+
+# ===========================================
+# 실제 데이터 기반 API 구현
+# ===========================================
+
 @api_bp.route('/location/update', methods=['POST'])
 def location_update():
     """
-    통합 위치 업데이트 API (Mock 구현)
+    통합 위치 업데이트 API (실제 YOLO 감지 데이터 기반)
     
-    TODO: 실제 구현 시 다음 부분들을 실제 로직으로 교체:
-    1. calculate_mock_motion() → 실제 속도/방향 계산 로직
-    2. generate_mock_vehicles() → 실제 카메라 감지 차량 데이터
-    3. generate_mock_people() → 실제 카메라 감지 보행자 데이터  
-    4. generate_mock_collision_warning() → 실제 충돌 예측 로직
+    클라이언트로부터 위치 정보를 받아서:
+    1. 사용자 모션 계산 (위치 이력 기반)
+    2. 현재 YOLO로 감지된 차량 정보 반환
+    3. 보행자 정보는 일단 빈 배열로 반환
+    4. 충돌 경고는 일단 없음으로 반환
     """
-    global request_counter
-    
     try:
         # 요청 데이터 검증
         data = request.get_json()
@@ -669,32 +673,33 @@ def location_update():
         location = data['location']
         user_lat = location['latitude']
         user_lng = location['longitude']
+        device_id = data['device_id']
         
-        # 요청 카운터 증가
-        request_counter += 1
+        logger.info(f"위치 업데이트 요청: 디바이스={device_id}, 위치=({user_lat:.6f}, {user_lng:.6f})")
         
         # ===========================================
-        # TODO: 실제 구현 시 아래 Mock 함수들을 교체
+        # 실제 데이터 기반 응답 생성
         # ===========================================
         
-        # 1. 사용자 모션 계산 (Mock)
-        calculated_motion = calculate_mock_motion(data)
+        # 1. 사용자 모션 계산 (위치 이력 기반)
+        calculated_motion = video_processor.calculate_user_motion_from_history(
+            device_id, location
+        )
         
-        # 2. 주변 차량 데이터 생성 (Mock) 
-        mock_vehicles = generate_mock_vehicles(user_lat, user_lng, count=5)
+        # 2. 현재 감지된 차량 데이터 가져오기 (실제 YOLO 감지 결과)
+        nearby_vehicles = video_processor.get_detected_vehicles_info()
         
-        # 3. 주변 보행자 데이터 생성 (Mock)
-        mock_people = generate_mock_people(user_lat, user_lng, count=3)
+        # 3. 보행자 데이터 (일단 빈 배열)
+        nearby_people = {
+            "people": [],
+            "total_count": 0
+        }
         
-        # 4. 충돌 경고 생성 (7번째 요청마다)
-        collision_warning_data = None
-        has_warning = False
-        
-        if request_counter % 7 == 0:  # 7번째마다 충돌 경고
-            collision_warning_data = generate_mock_collision_warning(mock_vehicles)
-            has_warning = collision_warning_data is not None
-            
-            logger.info(f"충돌 경고 생성됨 (요청 #{request_counter}): {collision_warning_data}")
+        # 4. 충돌 경고 (일단 없음)
+        collision_warning_data = {
+            "hasWarning": False,
+            "warning": None
+        }
         
         # ===========================================
         # 응답 데이터 구성
@@ -702,29 +707,20 @@ def location_update():
         
         response = {
             "success": True,
-            "message": "위치 정보 업데이트 완료 (Mock 모드)",
+            "message": "위치 정보 업데이트 완료 (실제 YOLO 감지 데이터)",
             "server_timestamp": datetime.now().isoformat(),
-            "assigned_id": f"mobile_user_{data['device_id']}",
+            "assigned_id": f"mobile_user_{device_id}",
             "calculated_motion": calculated_motion,
-            "nearby_vehicles": {
-                "vehicles": mock_vehicles,
-                "total_count": len(mock_vehicles)
-            },
-            "nearby_people": {
-                "people": mock_people,
-                "total_count": len(mock_people)
-            },
-            "collision_warning": {
-                "hasWarning": has_warning,
-                "warning": collision_warning_data if has_warning else None
-            }
+            "nearby_vehicles": nearby_vehicles,
+            "nearby_people": nearby_people,
+            "collision_warning": collision_warning_data
         }
         
         # 디버그 로그
-        logger.info(f"위치 업데이트 요청 처리 완료 (#{request_counter}): "
-                   f"디바이스={data['device_id']}, 위치=({user_lat:.6f}, {user_lng:.6f}), "
-                   f"차량={len(mock_vehicles)}대, 보행자={len(mock_people)}명, "
-                   f"충돌경고={'있음' if has_warning else '없음'}")
+        logger.info(f"위치 업데이트 응답: "
+                   f"디바이스={device_id}, "
+                   f"감지된 차량={nearby_vehicles['total_count']}대, "
+                   f"사용자속도={calculated_motion['speed_kph']:.1f}km/h")
         
         return jsonify(response)
         

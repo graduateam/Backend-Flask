@@ -47,8 +47,7 @@ class ObjectDetector:
 
         # 객체 클래스 이름 설정 (필요시 업데이트)
         self.class_names = {
-            0: "car",
-            1: "person",
+            0: "car"
             # 필요한 경우 추가 클래스 정의
         }
 
