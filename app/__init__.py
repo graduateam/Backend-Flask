@@ -4,7 +4,6 @@ Flask 애플리케이션 초기화
 """
 from flask import Flask
 from flask_socketio import SocketIO
-from flask_cors import CORS
 from app.utils.logger import setup_logger, setup_root_logger
 
 # 로거 설정
@@ -46,20 +45,13 @@ def create_app(config_object='config'):
 def register_extensions(app):
     """
     확장 모듈 등록
+
+    Parameters:
+    flask_app: Flask - Flask 애플리케이션 인스턴스
     """
     # Socket.IO 초기화
     socketio.init_app(app)
-    
-    # CORS 설정 (ngrok을 위해 모든 origin 허용)
-    CORS(app, 
-         origins=["*"],  # 모든 도메인 허용
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         allow_headers=["Content-Type", "Authorization"],
-         supports_credentials=True
-    )
-    
-    logger.info('Socket.IO 및 CORS 설정 완료')
-    
+
 def register_blueprints(app):
     """
     블루프린트 등록

@@ -15,7 +15,6 @@ from app.utils.coord_utils import CoordinateTransformer
 from app.services.streaming import video_stream
 from app.services.map_service import MapDataService
 from app.utils.logger import setup_logger
-from datetime import datetime
 
 # 로거 설정
 logger = setup_logger(__name__)
@@ -196,95 +195,7 @@ class VideoProcessor:
             'source_path': config.CAMERA_SOURCES.get(self.current_source),
             'risk_summary': risk_info  # 위험도 요약 정보
         }
-        
-    def get_detected_vehicles_info(self):
-        """
-        모든 감지된 객체를 차량으로 반환 (테스트용)
-        필터링 완전 제거 버전
-        """
-        try:
-            if not self._is_initialized or not self.detected_objects:
-                return {"vehicles": [], "total_count": 0}
-            
-            vehicles = []
-            
-            for i, obj in enumerate(self.detected_objects):
-                # 좌표 처리
-                coords = obj.get('coords')
-                if not coords:
-                    center = obj.get('center')
-                    if center and hasattr(self, 'transformer'):
-                        try:
-                            lat, lon = self.transformer.image_to_world(center)
-                            coords = (lat, lon)
-                        except:
-                            continue
-                    else:
-                        continue
-                
-                lat, lon = coords
-                obj_id = obj.get('id', i)
-                
-                # 모든 객체를 차량으로 처리
-                vehicle_info = {
-                    "id": f"object_{obj_id}",
-                    "type": "vehicle",
-                    "latitude": lat,
-                    "longitude": lon,
-                    "heading": 0,
-                    "speed": 0,
-                    "speed_kph": 0,
-                    "timestamp": datetime.now().isoformat(),
-                    "is_collision_risk": False,
-                    "ttc": None,
-                    "source": "camera_detection",
-                    "original_class": obj.get('class_name', 'unknown')
-                }
-                
-                vehicles.append(vehicle_info)
-            
-            logger.info(f"필터링 없이 반환: {len(vehicles)}개 객체")
-            
-            return {
-                "vehicles": vehicles,
-                "total_count": len(vehicles)
-            }
-            
-        except Exception as e:
-            logger.error(f"필터링 없는 객체 가져오기 오류: {str(e)}")
-            return {"vehicles": [], "total_count": 0}
 
-    def calculate_user_motion_from_history(self, device_id, current_location):
-        """
-        사용자의 위치 이력을 기반으로 모션 정보 계산
-        
-        Parameters:
-        device_id: str - 디바이스 ID
-        current_location: dict - 현재 위치 정보 {"latitude": float, "longitude": float}
-        
-        Returns:
-        dict: 계산된 모션 정보
-        """
-        try:
-            # TODO: 실제 구현 시 위치 이력을 데이터베이스나 메모리에 저장하고 활용
-            # 지금은 간단한 Mock 데이터 반환
-            import random
-            from datetime import datetime
-            
-            return {
-                "speed": random.uniform(0, 16.67),  # 0-60 km/h in m/s
-                "speed_kph": random.uniform(0, 60),
-                "heading": random.uniform(0, 360)
-            }
-            
-        except Exception as e:
-            logger.error(f"사용자 모션 계산 오류: {str(e)}")
-            return {
-                "speed": 0,
-                "speed_kph": 0,
-                "heading": 0
-            }
-            
     def _process_video_with_app_context(self, app):
         """앱 컨텍스트를 적용하여 비디오 처리"""
         with app.app_context():
