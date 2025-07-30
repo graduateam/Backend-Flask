@@ -9,8 +9,8 @@ from app.utils.logger import setup_logger, setup_root_logger
 # 로거 설정
 logger = setup_logger(__name__)
 
-# 전역으로 사용할 socketio 객체 생성
-socketio = SocketIO(cors_allowed_origins="*")
+# 전역으로 사용할 socketio 객체 생성 (Threading 모드로 강제)
+socketio = SocketIO(cors_allowed_origins="*", async_mode='threading')
 
 def create_app(config_object='config'):
     """
@@ -63,9 +63,13 @@ def register_blueprints(app):
     from app.views.main import register_main_blueprint
     register_main_blueprint(app)
 
-    # API 블루프린트
+    # 기존 API 블루프린트 (웹 관리자용)
     from app.apis.api import register_api_blueprint
     register_api_blueprint(app)
+
+    # 모바일 API 블루프린트 (모바일 앱 전용)
+    from app.apis.mobile_api import register_mobile_api_blueprint
+    register_mobile_api_blueprint(app)
 
     logger.info('모든 블루프린트 등록 완료')
 
