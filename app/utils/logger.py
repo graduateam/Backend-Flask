@@ -31,13 +31,15 @@ def setup_logger(name):
     level = getattr(logging, LOG_LEVEL)
     logger.setLevel(level)
 
-    # 부모 로거로의 전파 중지
+    # 부모 로거로의 전파 중지 (중복 방지)
     logger.propagate = False
 
-    # 콘솔 핸들러
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
-    logger.addHandler(console_handler)
+    # 중복 방지: 핸들러가 이미 있으면 추가하지 않음
+    if not logger.handlers:
+        # 콘솔 핸들러
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        logger.addHandler(console_handler)
 
     return logger
 

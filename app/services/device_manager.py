@@ -163,8 +163,8 @@ class DeviceManager:
         if not device_id or not isinstance(device_id, str):
             return False
         
-        # 정규표현식으로 형식 검증
-        pattern = r'^device_\d{10}_[a-zA-Z0-9]{12}$'
+        # 정규표현식으로 형식 검증 (랜덤 문자열 길이를 8-14자로 허용)
+        pattern = r'^device_\d{10}_[a-zA-Z0-9]{8,14}$'
         return bool(re.match(pattern, device_id))
     
     def get_or_create_session(self, device_id: str) -> Optional[MobileDeviceSession]:
