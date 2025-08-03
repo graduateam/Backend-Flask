@@ -58,6 +58,81 @@ class CollisionPredictor:
 
         logger.info(f"업그레이드된 충돌 예측기 초기화: 위험도 임계값={risk_threshold}점")
 
+    def add_object(self, obj_id, position, speed, heading, timestamp, obj_type='mobile_user'):
+        """
+        mobile_integration.py 호환성을 위한 메소드
+        """
+        lat, lon = position  
+        self.update(obj_id, lat, lon, timestamp)
+        
+    def predict_collisions(self):
+        """
+        mobile_integration.py 호환성을 위한 메소드
+        """
+        return self.predict_collisions_by_risk_score()
+    
+    def predict_mobile_user_collisions(self, mobile_user_id):
+        """
+        특정 모바일 사용자와 다른 객체들 간 충돌만 계산 (성능 최적화)
+        
+        Parameters:
+        mobile_user_id: str - 모바일 사용자 ID
+        
+        Returns:
+        dict - 모바일 사용자와 관련된 충돌 위험 {(mobile_id, other_id): risk_score}
+        """
+        mobile_collisions = {}
+        mobile_collision_points = {}
+        mobile_risk_details = {}
+        
+        # 모바일 사용자가 시스템에 등록되어 있는지 확인
+        if mobile_user_id not in self.objects:
+            logger.warning(f"모바일 사용자 {mobile_user_id}가 충돌 예측 시스템에 등록되지 않음")
+            return mobile_collisions
+            
+        # 모바일 사용자 객체 유효성 확인
+        mobile_obj = self.objects[mobile_user_id]
+        if (mobile_obj['rectangle'] is None or len(mobile_obj['positions']) < 2):
+            logger.warning(f"모바일 사용자 {mobile_user_id}의 위치 정보가 부족함")
+            return mobile_collisions
+        
+        # 모바일 사용자와 다른 모든 객체 간 충돌 계산 (O(n) 복잡도)
+        other_obj_count = 0
+        for other_id in self.objects:
+            if other_id == mobile_user_id:
+                continue
+                
+            other_obj = self.objects[other_id]
+            
+            # 상대방 객체 유효성 확인
+            if (other_obj['rectangle'] is None or len(other_obj['positions']) < 2):
+                continue
+                
+            other_obj_count += 1
+            
+            # 위험도 점수 계산
+            risk_score, risk_breakdown = self._calculate_risk_score(mobile_user_id, other_id)
+            
+            # 위험도가 임계값 이상인 경우 경고 추가
+            if risk_score >= self.risk_threshold:
+                pair_key = (mobile_user_id, other_id)
+                mobile_collisions[pair_key] = risk_score
+                mobile_risk_details[pair_key] = risk_breakdown
+                
+                # 충돌 예상 지점 계산
+                collision_point = self._estimate_collision_point(mobile_user_id, other_id)
+                if collision_point:
+                    mobile_collision_points[pair_key] = collision_point
+        
+        logger.info(f"[MOBILE-COLLISION] 모바일 사용자 {mobile_user_id}와 {other_obj_count}개 객체 간 충돌 계산 완료, 위험 충돌: {len(mobile_collisions)}개")
+        
+        # 클래스 변수에 결과 저장 (기존 API 호환성을 위해)
+        self.collision_warnings = mobile_collisions
+        self.collision_points = mobile_collision_points  
+        self.risk_details = mobile_risk_details
+        
+        return mobile_collisions
+
     def update(self, obj_id, lat, lon, timestamp):
         """
         객체 위치 업데이트 (기존과 동일)

@@ -48,7 +48,7 @@ CAMERA_NAMES = {
 }
 
 # 기본 카메라 소스
-DEFAULT_CAMERA_SOURCE = "file"
+DEFAULT_CAMERA_SOURCE = "camera_0"
 
 # 차량 설정
 CAR_LENGTH = 4.5  # 차량 길이 (미터)
@@ -67,6 +67,59 @@ RISK_LEVELS = {
     'MEDIUM': {'min': 55, 'max': 70, 'color': '#fd7e14'},   # 주황색
     'HIGH': {'min': 70, 'max': 85, 'color': '#dc3545'},     # 빨간색
     'CRITICAL': {'min': 85, 'max': 100, 'color': '#6f42c1'} # 보라색
+}
+
+# 중복 객체 탐지 설정
+DUPLICATE_DETECTION_SETTINGS = {
+    'enabled': True,                       # 중복 객체 탐지 활성화
+    'distance_threshold': 5.0,             # 중복 판정 거리 임계값 (미터)
+    'gps_priority': True                   # GPS 위치를 카메라 탐지보다 우선시
+}
+
+# 고급 매칭 검증 설정
+ADVANCED_MATCHING_SETTINGS = {
+    'enabled': True,                       # 고급 매칭 검증 활성화
+    'validation_interval': 1.0,            # 검증 주기 (초) - 성능 최적화
+    'confidence_threshold': 0.7,           # 재매칭 트리거 신뢰도 임계값
+    'rematch_cooldown': 1.5,               # 재매칭 쿨다운 (초) - 빠른 반응
+    'max_history_entries': 5,              # 매칭 히스토리 최대 보관 개수 - 메모리 최적화
+    'inactive_user_cleanup_interval': 300, # 비활성 사용자 정리 간격 (초)
+    
+    # 검증 가중치
+    'validation_weights': {
+        'distance_consistency': 0.5,       # 거리 일관성 가중치 (높임)
+        'movement_pattern': 0.3,           # 움직임 패턴 가중치 (낮춤)
+        'object_persistence': 0.2          # 객체 지속성 가중치
+    },
+    
+    # 움직임 패턴 허용 오차
+    'movement_tolerances': {
+        'speed_diff_threshold': 3.0,       # 속도 차이 허용 오차 (m/s) - GPS 노이즈 고려
+        'heading_diff_threshold': 45.0,    # 방향 차이 허용 오차 (도) - 더 관대하게
+        'min_speed_for_heading': 1.0       # 방향 검증 최소 속도 (m/s)
+    },
+    
+    # 거리 일관성 검증 (단순화)
+    'distance_validation': {
+        'max_jump_threshold': 5.0,         # 최대 허용 거리 점프 (미터) - GPS 정확도 고려
+        'gps_noise_threshold': 3.0         # GPS 노이즈 허용 범위 (미터)
+    },
+    
+    # 객체 지속성 검증
+    'persistence_validation': {
+        'min_detection_time': 1.0,         # 최소 탐지 시간 (초)
+        'disappear_penalty': 0.3,          # 객체 사라짐 페널티
+        'new_object_penalty': 0.2          # 새 객체 페널티
+    },
+    
+    # 점수 기본값 (하드코딩 값들을 설정으로 이동)
+    'scoring_defaults': {
+        'initial_high_score': 0.8,         # 초기 매칭 시 높은 점수
+        'distance_jump_penalty': 0.2,      # 거리 점프 감지 시 점수
+        'default_confidence': 0.5,         # 기본 신뢰도
+        'no_history_score': 0.7,          # 히스토리 없을 때 점수
+        'persistence_full_score': 1.0      # 완전한 지속성 점수
+    }
 }
 
 # 골목길 특화 설정

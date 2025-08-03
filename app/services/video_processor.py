@@ -223,7 +223,8 @@ class VideoProcessor:
                 logger.info(f"비디오 정보: {width}x{height}, {fps}fps, 총 {frame_count}프레임")
 
             elif self.current_source == "camera_0":
-                logger.info(f"외부 API로부터 프레임을 수신하는 '{config.CAMERA_NAMES.get(self.current_source)}' 모드")
+                logger.info(f"[CAMERA-0] 외부 API로부터 프레임을 수신하는 '{config.CAMERA_NAMES.get(self.current_source)}' 모드")
+                logger.info(f"[CAMERA-0] 현재 프레임 상태: {self.camera_frames.get('camera_0') is not None}")
 
             elif self.current_source.startswith("camera_"):
                 camera_source = config.CAMERA_SOURCES[self.current_source]
