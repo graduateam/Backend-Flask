@@ -753,16 +753,18 @@ def _get_all_detected_objects():
         return []
 
 def _map_object_type(backend_class_name):
-    """백엔드 클래스명을 프론트엔드 타입으로 매핑"""
+    """백엔드 클래스명을 프론트엔드 타입으로 매핑 (차량 전용)"""
     mapping = {
         'car': ('vehicle', 'car'),
-        'truck': ('vehicle', 'truck'), 
-        'bus': ('vehicle', 'bus'),
-        'motorcycle': ('vehicle', 'motorcycle'),
-        'person': ('person', 'adult'),
-        'bicycle': ('bicycle', 'bicycle'),
+        # 추후 객체탐지 모델 업그레이드 시 추가 가능:
+        # 'truck': ('vehicle', 'truck'), 
+        # 'bus': ('vehicle', 'bus'),
+        # 'motorcycle': ('vehicle', 'motorcycle'),
+        # 'person': ('person', 'adult'),
+        # 'bicycle': ('bicycle', 'bicycle'),
     }
-    return mapping.get(backend_class_name, ('unknown', backend_class_name))
+    # 차량 전용 모델이므로 기본값도 vehicle로 설정
+    return mapping.get(backend_class_name, ('vehicle', 'car'))
 
 def _get_risk_from_prediction(obj_id, prediction_result, risk_summary):
     """기존 충돌 예측 시스템에서 위험도 정보 추출"""

@@ -45,11 +45,14 @@ class ObjectDetector:
         # 좌표 변환기 초기화
         self.transformer = CoordinateTransformer(image_points, world_points)
 
-        # 객체 클래스 이름 설정 (필요시 업데이트)
+        # 객체 클래스 이름 설정 (차량 전용 모델) -> 필요시 업데이트
         self.class_names = {
             0: "car",
-            1: "person",
-            # 필요한 경우 추가 클래스 정의
+            # 추후 객체탐지 모델 업그레이드 시 추가 가능:
+            # 1: "truck",
+            # 2: "bus", 
+            # 3: "motorcycle",
+            # 4: "person"
         }
 
     def detect_objects(self, frame, persist=True):
@@ -85,6 +88,12 @@ class ObjectDetector:
 
             # 클래스 ID 추출
             class_id = int(obj.cls) if hasattr(obj, 'cls') else -1
+
+            # 차량 전용 모델 로직
+            # 차량 전용 모델 검증 및 예외 처리
+            if class_id != 0:  # car가 아닌 경우
+                print(f"⚠️  차량 전용 모델에서 예상치 못한 class_id: {class_id} → car(0)로 강제 변경")
+                class_id = 0  # 강제로 car로 변경
 
             # 바운딩 박스의 중앙 좌표 계산
             center_x = int((bbox[0] + bbox[2]) / 2)
