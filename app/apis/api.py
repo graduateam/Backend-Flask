@@ -221,23 +221,14 @@ def get_video_bounds():
             width = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # 🆕 실제 CCTV 커버리지 영역 좌표 (비디오 해상도 변경 반영)
-        corners = [
-            (44, 43),    # 좌상단
-            (579, 45),   # 우상단
-            (580, 445),  # 우하단
-            (42, 446)    # 좌하단
+        # 🆕 실제 CCTV 커버리지 영역 좌표 (고정값)
+        # 변환 오류 방지를 위해 실제 GPS 좌표를 직접 사용
+        geo_corners = [
+            [37.33878879, 126.73490515],  # 좌상단
+            [37.33918109, 126.73423283],  # 우상단
+            [37.33945957, 126.73488587],  # 우하단
+            [37.33934605, 126.73508427]   # 좌하단
         ]
-
-        # 각 모서리를 위도, 경도로 변환
-        geo_corners = []
-        for x, y in corners:
-            try:
-                lat, lon = transformer.image_to_world((x, y))
-                geo_corners.append([lat, lon])
-            except Exception as e:
-                logger.error(f"좌표 변환 오류: {str(e)}")
-                geo_corners.append(None)
 
         return jsonify({
             'success': True,

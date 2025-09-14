@@ -48,61 +48,21 @@ def _get_real_cctv_coverage_data():
             width = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # 🆕 실제 CCTV 커버리지 영역 좌표 (비디오 해상도 변경 반영)
-        corners = [
-            (44, 43),    # 좌상단
-            (579, 45),   # 우상단
-            (580, 445),  # 우하단
-            (42, 446)    # 좌하단
+        # 🆕 실제 CCTV 커버리지 영역 좌표 (고정값)
+        # 변환 오류 방지를 위해 실제 GPS 좌표를 직접 사용 (GeoJSON 형식: [경도, 위도])
+        geo_corners = [
+            [126.73490515, 37.33878879],  # 좌상단
+            [126.73423283, 37.33918109],  # 우상단  
+            [126.73488587, 37.33945957],  # 우하단
+            [126.73508427, 37.33934605]   # 좌하단
         ]
-
-        # 각 모서리를 위도, 경도로 변환
-        geo_corners = []
-        center_lat, center_lon = 0, 0
-        valid_corners = 0
-        
-        for x, y in corners:
-            try:
-                lat, lon = transformer.image_to_world((x, y))
-                geo_corners.append([lon, lat])  # GeoJSON 형식: [경도, 위도]
-                center_lat += lat
-                center_lon += lon
-                valid_corners += 1
-            except Exception as e:
-                logger.error(f"좌표 변환 오류: {str(e)}")
-                # 🆕 실패시 실제 CCTV 커버리지 좌표 사용
-                fallback_coords = [
-                    [126.73490515, 37.33878879],  # 좌상
-                    [126.73423283, 37.33918109],  # 우상
-                    [126.73488587, 37.33945957],  # 우하
-                    [126.73508427, 37.33934605]   # 좌하
-                ]
-                # corners 인덱스에 맞는 fallback 좌표 사용
-                corner_idx = len(geo_corners)
-                if corner_idx < len(fallback_coords):
-                    lon, lat = fallback_coords[corner_idx]
-                    geo_corners.append([lon, lat])  # GeoJSON 형식: [경도, 위도]
-                    center_lat += lat
-                    center_lon += lon
-                else:
-                    # 인덱스 초과시 기본 중심점 사용
-                    geo_corners.append([126.73475953, 37.33919387])
-                    center_lat += 37.33919387
-                    center_lon += 126.73475953
-                valid_corners += 1
-
-        # 폴리곤을 닫기 위해 첫 번째 점을 마지막에 추가
-        if geo_corners:
-            geo_corners.append(geo_corners[0])
         
         # 중심점 계산
-        if valid_corners > 0:
-            center_lat /= valid_corners
-            center_lon /= valid_corners
-        else:
-            # 🆕 실제 CCTV 커버리지 중심점 사용 (4개 꼭짓점의 평균)
-            center_lat = (37.33878879 + 37.33918109 + 37.33945957 + 37.33934605) / 4  # 37.33919387
-            center_lon = (126.73490515 + 126.73423283 + 126.73488587 + 126.73508427) / 4  # 126.73475953
+        center_lat = (37.33878879 + 37.33918109 + 37.33945957 + 37.33934605) / 4  # 37.33919387
+        center_lon = (126.73490515 + 126.73423283 + 126.73488587 + 126.73508427) / 4  # 126.73475953
+
+        # 폴리곤을 닫기 위해 첫 번째 점을 마지막에 추가
+        geo_corners.append(geo_corners[0])
 
         # CCTV 데이터 형식으로 변환
         cctv_data = [{
