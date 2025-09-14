@@ -219,8 +219,8 @@ def update_location():
         # 충돌 경고 계산
         collision_warning = _calculate_collision_warning(device_id, latitude, longitude, motion_data)
 
-        # 🆕 감지된 모든 객체 정보 수집
-        all_detected_objects = _get_all_detected_objects()
+        # 🆕 감지된 모든 객체 정보 수집 (사용자 중심 위험도 계산)
+        all_detected_objects = _get_all_detected_objects(mobile_user_id=device_id)
 
         # 성공 응답
         server_timestamp = datetime.now().isoformat() + 'Z'
@@ -662,10 +662,13 @@ def get_mobile_api_status():
             'timestamp': datetime.now().isoformat() + 'Z'
         }), 500
 
-def _get_all_detected_objects():
+def _get_all_detected_objects(mobile_user_id=None):
     """
     라즈베리파이 카메라로 감지된 모든 객체 정보를 프론트엔드 형식으로 변환
-    기존 충돌 예측 시스템과 위험도 계산 로직을 활용
+    사용자 중심 충돌 예측: 모바일 사용자와 직접 관련된 충돌 위험만 반영
+    
+    Parameters:
+    mobile_user_id: str - 모바일 사용자 ID (위험도 계산 기준)
     
     Returns:
     list - 프론트엔드 DetectedObject 형식의 객체 목록
@@ -698,8 +701,8 @@ def _get_all_detected_objects():
             backend_class_name = obj.get('class_name', 'unknown')
             object_type, subtype = _map_object_type(backend_class_name)
             
-            # 기존 충돌 예측 시스템에서 위험도 정보 가져오기
-            risk_level, collision_probability, ttc = _get_risk_from_prediction(obj_id, prediction_result, risk_summary)
+            # 사용자 중심 충돌 예측: 모바일 사용자와 직접 관련된 위험도만 반영
+            risk_level, collision_probability, ttc = _get_risk_from_prediction(obj_id, prediction_result, risk_summary, mobile_user_id)
             
             # 상대 방향 계산 (기존 predictor 객체 정보 활용)
             relative_direction = _calculate_relative_direction_from_prediction(obj_id, prediction_result)
@@ -766,24 +769,36 @@ def _map_object_type(backend_class_name):
     # 차량 전용 모델이므로 기본값도 vehicle로 설정
     return mapping.get(backend_class_name, ('vehicle', 'car'))
 
-def _get_risk_from_prediction(obj_id, prediction_result, risk_summary):
-    """기존 충돌 예측 시스템에서 위험도 정보 추출"""
+def _get_risk_from_prediction(obj_id, prediction_result, risk_summary, mobile_user_id=None):
+    """
+    사용자 중심 충돌 예측: 모바일 사용자와 직접 충돌 위험이 있는 차량만 위험도 반영
+    """
     try:
-        # 충돌 위험 ID에 포함되어 있는지 확인
-        if obj_id in video_processor.collision_risk_ids:
-            return 'high', 0.8, 3.0  # 예시값
+        # 🎯 모바일 사용자가 있는 경우, 해당 사용자와의 충돌만 확인
+        if mobile_user_id and hasattr(video_processor, 'predictor'):
+            # 모바일 사용자 전용 충돌 예측 결과 확인
+            mobile_collisions = video_processor.predictor.predict_mobile_user_collisions(mobile_user_id)
+            
+            # 현재 객체가 모바일 사용자와 충돌 위험이 있는지 확인
+            for collision_pair, risk_score in mobile_collisions.items():
+                user_id, other_id = collision_pair
+                # 현재 객체가 충돌 쌍에 포함되어 있는지 확인
+                if (user_id == mobile_user_id and other_id == obj_id) or (user_id == obj_id and other_id == mobile_user_id):
+                    # 위험도 점수에 따른 레벨 결정
+                    if risk_score >= 85:
+                        return 'critical', min(risk_score / 100.0, 1.0), 1.0
+                    elif risk_score >= 70:
+                        return 'high', min(risk_score / 100.0, 1.0), 2.0
+                    elif risk_score >= 55:
+                        return 'medium', min(risk_score / 100.0, 1.0), 4.0
+                    else:
+                        return 'low', min(risk_score / 100.0, 1.0), 8.0
         
-        # prediction_result에서 위험도 정보 추출
-        if prediction_result and risk_summary:
-            # 실제 예측 결과에서 위험도 계산
-            # 여기서는 간단한 구현으로 대체
-            pass
-        
-        # 기본값
+        # 모바일 사용자와 직접적인 충돌 위험이 없는 경우 모든 차량은 안전 상태로 표시
         return 'low', 0.02, None
         
     except Exception as e:
-        logger.error(f"위험도 정보 추출 오류: {str(e)}")
+        logger.warning(f"위험도 계산 오류 (obj_id={obj_id}): {str(e)}")
         return 'low', 0.02, None
 
 def _calculate_relative_direction_from_prediction(obj_id, prediction_result):

@@ -1008,10 +1008,10 @@ class MobileCollisionIntegrator:
                                 risk_score: float, collisions: Dict) -> Dict[str, Any]:
         """충돌 경고 정보 구성"""
         try:
-            # 상대방 객체 타입 결정
+            # 상대방 객체 타입 결정 - 차량 탐지 전용
             other_obj_type = other_obj_info.get('type', 'vehicle')
             if other_obj_type == 'mobile_user':
-                other_obj_type = 'person'  # 모바일 사용자는 보행자로 분류
+                other_obj_type = 'vehicle'  # 모바일 사용자도 차량으로 분류 (차량 탐지 전용)
             
             # 거리 계산
             mobile_pos = mobile_session.get_current_position()

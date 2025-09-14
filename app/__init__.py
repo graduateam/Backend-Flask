@@ -44,36 +44,51 @@ def create_app(config_object='config'):
 
 def register_extensions(app):
     """
-    확장 모듈 등록
+    확장 모듈 등록 - 모바일 최적화 모드
 
     Parameters:
     flask_app: Flask - Flask 애플리케이션 인스턴스
     """
+    # 🚫 Socket.IO 비활성화 (웹 실시간 통신 불필요, 모바일 성능 최적화)
     # Socket.IO 초기화
-    socketio.init_app(app)
+    # socketio.init_app(app)
+    pass
 
 def register_blueprints(app):
     """
-    블루프린트 등록
+    블루프린트 등록 - 환경 변수 기반 선택적 활성화
 
     Parameters:
     flask_app: Flask - Flask 애플리케이션 인스턴스
     """
-    # 메인 뷰 블루프린트
-    from app.views.main import register_main_blueprint
-    register_main_blueprint(app)
+    import os
+    
+    # 🎛️ 환경 변수로 웹 인터페이스 활성화 여부 결정
+    enable_web = os.environ.get('ENABLE_WEB_INTERFACE', 'false').lower() in ('true', '1', 't', 'yes')
+    
+    if enable_web:
+        # 🌐 디버그/개발 모드: 웹 인터페이스 활성화 (비디오 확인용)
+        from app.views.main import register_main_blueprint
+        register_main_blueprint(app)
+        
+        # 필요시 관리자 API도 활성화
+        from app.apis.api import register_api_blueprint
+        register_api_blueprint(app)
+        
+        logger.info('🌐 개발 모드: 웹 인터페이스 + 모바일 API 활성화')
+        print("🌐 비디오 스트림: http://localhost:5000/video_feed")
+        print("🌐 웹 인터페이스: http://localhost:5000/")
+    else:
+        logger.info('📱 운영 모드: 모바일 API 전용 (최고 성능)')
+        print("📱 모바일 전용 모드 (웹 비활성화)")
 
-    # 기존 API 블루프린트 (웹 관리자용)
-    from app.apis.api import register_api_blueprint
-    register_api_blueprint(app)
-
-    # 모바일 API 블루프린트 (모바일 앱 전용)
+    # ✅ 모바일 API는 항상 활성화
     from app.apis.mobile_api import register_mobile_api_blueprint
     register_mobile_api_blueprint(app)
 
-    logger.info('모든 블루프린트 등록 완료')
-
 def register_socketio_handlers():
-    """Socket.IO 이벤트 핸들러 등록"""
-    from app.socket import events
-    logger.info('Socket.IO 이벤트 핸들러 등록 완료')
+    """Socket.IO 이벤트 핸들러 등록 - 모바일 최적화로 비활성화"""
+    # 🚫 Socket.IO 핸들러 비활성화 (웹 실시간 통신 불필요)
+    # from app.socket import events
+    # logger.info('Socket.IO 이벤트 핸들러 등록 완료')
+    pass
