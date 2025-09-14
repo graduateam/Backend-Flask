@@ -41,6 +41,20 @@ class ObjectDetector:
 
         # YOLO 모델 로드
         self.model = YOLO(model_path).to(self.device)
+        
+        # 장치 정보 출력
+        print(f"🔧 YOLO 모델 초기화 완료")
+        print(f"📱 사용 장치: {self.device}")
+        print(f"🖥️ 운영체제: {os_name}")
+        
+        # CUDA 관련 상세 정보
+        if torch.cuda.is_available():
+            print(f"🚀 CUDA 사용 가능: {torch.cuda.device_count()}개 GPU 감지")
+            if self.device.type == 'cuda':
+                print(f"⚡ GPU 모델: {torch.cuda.get_device_name(0)}")
+                print(f"💾 GPU 메모리: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f}GB")
+        else:
+            print("🔄 CUDA 사용 불가 - CPU 모드로 실행")
 
         # 좌표 변환기 초기화
         self.transformer = CoordinateTransformer(image_points, world_points)
@@ -55,13 +69,14 @@ class ObjectDetector:
             # 4: "person"
         }
 
-    def detect_objects(self, frame, persist=True):
+    def detect_objects(self, frame, persist=True, show_perf=False):
         """
         영상 프레임에서 객체 감지 및 추적 수행
 
         Parameters:
         frame: np.array - 영상 프레임
         persist: bool - 객체 ID 유지 여부 (추적 활성화)
+        show_perf: bool - 성능 정보 출력 여부
 
         Returns:
         list - 감지된 객체 목록 [{'id': int, 'bbox': [x1, y1, x2, y2], 'class_id': int, 'coords': (lat, lon), 'center': (x, y)}]
@@ -71,6 +86,12 @@ class ObjectDetector:
 
         # 객체 감지 수행
         results = self.model.track(frame, persist=persist) if persist else self.model(frame)
+        
+        # GPU 메모리 사용량 체크 (CUDA 사용 시)
+        if show_perf and self.device.type == 'cuda':
+            memory_used = torch.cuda.memory_allocated(0) / 1024**2  # MB
+            memory_cached = torch.cuda.memory_reserved(0) / 1024**2  # MB
+            print(f"🔥 GPU 메모리 사용량: {memory_used:.1f}MB (캐시: {memory_cached:.1f}MB)")
 
         # 감지된 객체 정보 추출
         detected_objects = []

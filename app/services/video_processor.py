@@ -6,6 +6,7 @@ import numpy as np
 import time
 import threading
 import cv2
+import queue
 from flask import current_app
 import config
 from app.analyzers.object_detection import ObjectDetector
@@ -44,8 +45,14 @@ class VideoProcessor:
 
         # 카메라 소스 관리
         self.current_source = config.DEFAULT_CAMERA_SOURCE
-        self.camera_frames = {}  # 카메라 ID별 최신 프레임 저장
-        self.camera_locks = {}   # 카메라 ID별 스레드 락
+        self.camera_frames = {}  # 카메라 ID별 최신 프레임 저장 (읽기 전용)
+        self.camera_locks = {}   # 카메라 ID별 스레드 락 (frame storage만 사용)
+        
+        # 이중 버퍼링 시스템 - YOLO 처리용 별도 버퍼
+        self.processing_frames = {}  # YOLO 처리용 프레임 버퍼
+        self.frame_queue = queue.Queue(maxsize=5)  # 비동기 YOLO 처리용 큐
+        self.yolo_thread = None  # 별도 YOLO 처리 스레드
+        self.yolo_running = False
 
         # 각 카메라에 대한 락 초기화
         for camera_id in config.CAMERA_SOURCES:
@@ -104,11 +111,29 @@ class VideoProcessor:
         return True
 
     def set_camera_frame(self, camera_id, frame):
-        """특정 카메라에서 받은 최신 프레임 설정"""
-        if camera_id in self.camera_locks:
+        """특정 카메라에서 받은 최신 프레임 설정 - 이중 버퍼링으로 락 분리"""
+        if camera_id in self.camera_locks and frame is not None:
+            # 1. 빠른 프레임 저장 (라즈베리파이 응답용)
             with self.camera_locks[camera_id]:
-                self.camera_frames[camera_id] = frame.copy() if frame is not None else None
-                return True
+                self.camera_frames[camera_id] = frame.copy()
+            
+            # 2. YOLO 처리용 비동기 큐에 추가 (락 없음)
+            try:
+                frame_data = {
+                    'camera_id': camera_id,
+                    'frame': frame.copy(),
+                    'timestamp': time.time()
+                }
+                self.frame_queue.put_nowait(frame_data)
+            except queue.Full:
+                # 큐가 가득 차면 가장 오래된 프레임 제거 후 추가
+                try:
+                    self.frame_queue.get_nowait()
+                    self.frame_queue.put_nowait(frame_data)
+                except queue.Empty:
+                    pass
+            
+            return True
         return False
 
     def get_camera_frame(self, camera_id):
@@ -146,8 +171,17 @@ class VideoProcessor:
             # 소켓 업데이트 스레드 시작
             from app.socket.events import start_socket_update_thread
             self.socket_thread = start_socket_update_thread(app)
+            
+            # YOLO 처리를 위한 별도 스레드 시작
+            self.yolo_running = True
+            self.yolo_thread = threading.Thread(
+                target=self._yolo_processor_with_app_context,
+                args=(app,)
+            )
+            self.yolo_thread.daemon = True
+            self.yolo_thread.start()
 
-            logger.info(f"비디오 처리 및 소켓 업데이트 스레드 시작됨 (소스: {self.current_source})")
+            logger.info(f"비디오 처리, 소켓 업데이트, YOLO 처리 스레드 시작됨 (소스: {self.current_source})")
             return {'success': True, 'message': f'비디오 처리가 시작되었습니다. (소스: {config.CAMERA_NAMES.get(self.current_source, self.current_source)})'}
 
         except Exception as e:
@@ -155,6 +189,61 @@ class VideoProcessor:
             error_msg = f"처리 시작 오류: {str(e)}"
             logger.error(error_msg)
             return {'success': False, 'message': error_msg}
+
+    def _yolo_processor_with_app_context(self, app):
+        """앱 컨텍스트를 포함한 YOLO 처리 래퍼"""
+        with app.app_context():
+            self.yolo_processor()
+
+    def yolo_processor(self):
+        """별도 스레드에서 YOLO 처리 수행 - 락 분리로 300ms 지연 해결"""
+        logger.info("YOLO 비동기 처리 스레드 시작")
+        
+        while self.yolo_running:
+            try:
+                # 큐에서 프레임 가져오기 (최대 0.1초 대기)
+                frame_data = self.frame_queue.get(timeout=0.1)
+                
+                camera_id = frame_data['camera_id']
+                frame = frame_data['frame']
+                
+                # 현재 활성화된 카메라만 처리
+                if camera_id != self.current_source:
+                    continue
+                
+                # YOLO 객체 감지 수행 (락 없이)
+                detected_objects = self.detector.detect_objects(frame)
+                
+                # 충돌 예측 수행
+                prediction_result = None
+                if detected_objects:
+                    prediction_result = self.predictor.update_from_detection(detected_objects)
+                
+                # 결과를 thread-safe하게 업데이트
+                self.detected_objects = detected_objects
+                self.prediction_result = prediction_result
+                
+                if prediction_result:
+                    # 충돌 위험 객체 ID 업데이트
+                    self.collision_risk_ids.clear()
+                    for (id1, id2) in prediction_result['collisions'].keys():
+                        self.collision_risk_ids.add(id1)
+                        self.collision_risk_ids.add(id2)
+                    
+                    # 위험도 요약 정보 업데이트
+                    self.risk_summary = self.predictor.get_risk_summary()
+                
+                # 처리된 프레임을 별도 버퍼에 저장 (디스플레이용)
+                self.processing_frames[camera_id] = frame.copy()
+                
+            except queue.Empty:
+                # 큐가 비어있으면 계속 대기
+                continue
+            except Exception as e:
+                logger.error(f"YOLO 처리 오류: {str(e)}")
+                time.sleep(0.1)
+        
+        logger.info("YOLO 비동기 처리 스레드 종료")
 
     def stop_processing(self):
         """비디오 처리 중지"""
@@ -164,6 +253,7 @@ class VideoProcessor:
         # 처리 플래그 해제
         self.is_processing = False
         self.is_socket_running = False
+        self.yolo_running = False
 
         # 비디오 캡처 해제
         if self.cap is not None:
@@ -298,21 +388,8 @@ class VideoProcessor:
                     continue
 
                 try:
-                    # 객체 감지 수행
-                    self.detected_objects = self.detector.detect_objects(frame)
-
-                    # 새로운 충돌 예측 수행
-                    if self.detected_objects:
-                        self.prediction_result = self.predictor.update_from_detection(self.detected_objects)
-
-                        # 충돌 위험 객체 ID 업데이트
-                        self.collision_risk_ids.clear()
-                        for (id1, id2) in self.prediction_result['collisions'].keys():
-                            self.collision_risk_ids.add(id1)
-                            self.collision_risk_ids.add(id2)
-
-                        # 위험도 요약 정보 업데이트
-                        self.risk_summary = self.predictor.get_risk_summary()
+                    # YOLO 처리는 별도 스레드에서 비동기 처리됨 
+                    # 여기서는 디스플레이용 프레임만 처리
 
                     # 바운딩 박스를 그릴 프레임 복사
                     display_frame = frame.copy()
