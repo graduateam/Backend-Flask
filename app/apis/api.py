@@ -215,14 +215,7 @@ def get_camera_sources():
 def get_video_bounds():
     """비디오 프레임의 경계를 위도, 경도 좌표로 반환"""
     try:
-        # 비디오 해상도 가져오기
-        width, height = 640, 480
-        if video_processor.cap is not None:
-            width = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        # 🆕 실제 CCTV 커버리지 영역 좌표 (고정값)
-        # 변환 오류 방지를 위해 실제 GPS 좌표를 직접 사용
+        # 🆕 고정된 CCTV 바운더리 좌표 (위도, 경도 순서)
         geo_corners = [
             [37.33878879, 126.73490515],  # 좌상단
             [37.33918109, 126.73423283],  # 우상단
@@ -232,7 +225,6 @@ def get_video_bounds():
 
         return jsonify({
             'success': True,
-            'video_size': {'width': width, 'height': height},
             'corners': geo_corners
         })
     except Exception as e:

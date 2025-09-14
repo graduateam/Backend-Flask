@@ -29,27 +29,10 @@ def register_mobile_api_blueprint(app):
 # CCTV 커버리지 데이터는 실제 비디오 경계에서 동적으로 생성됨
 def _get_real_cctv_coverage_data():
     """
-    웹에서 사용하는 /api/video-bounds와 동일한 실제 비디오 경계 데이터를 
-    CCTV 커버리지 형식으로 변환하여 반환
+    고정된 CCTV 바운더리 좌표를 모바일 CCTV 커버리지 형식으로 반환
     """
     try:
-        from app.utils.coord_utils import CoordinateTransformer
-        import cv2
-        
-        # 좌표 변환기 초기화 (api.py와 동일)
-        transformer = CoordinateTransformer(
-            image_points=config.IMAGE_POINTS,
-            world_points=config.WORLD_POINTS
-        )
-        
-        # 비디오 해상도 가져오기
-        width, height = 640, 480
-        if video_processor.cap is not None:
-            width = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        # 🆕 실제 CCTV 커버리지 영역 좌표 (고정값)
-        # 변환 오류 방지를 위해 실제 GPS 좌표를 직접 사용 (GeoJSON 형식: [경도, 위도])
+        # 🆕 고정된 CCTV 바운더리 좌표 (GeoJSON 형식: [경도, 위도])
         geo_corners = [
             [126.73490515, 37.33878879],  # 좌상단
             [126.73423283, 37.33918109],  # 우상단  
@@ -82,8 +65,8 @@ def _get_real_cctv_coverage_data():
         return cctv_data
         
     except Exception as e:
-        logger.error(f"실시간 CCTV 커버리지 생성 오류: {str(e)}")
-        # 🆕 오류 시 실제 CCTV 커버리지 데이터 반환
+        logger.error(f"CCTV 커버리지 생성 오류: {str(e)}")
+        # 🆕 오류 시 동일한 고정 CCTV 바운더리 좌표 반환
         return [{
             "cctv_id": "cctv_001",
             "name": "기본_CCTV_커버리지",
