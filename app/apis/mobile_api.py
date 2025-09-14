@@ -48,12 +48,12 @@ def _get_real_cctv_coverage_data():
             width = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # 비디오 프레임의 4개 모서리 좌표 (시계방향)
+        # 🆕 실제 CCTV 커버리지 영역 좌표 (비디오 해상도 변경 반영)
         corners = [
-            (0, 0),           # 좌상단
-            (width, 0),       # 우상단  
-            (width, height),  # 우하단
-            (0, height)       # 좌하단
+            (44, 43),    # 좌상단
+            (579, 45),   # 우상단
+            (580, 445),  # 우하단
+            (42, 446)    # 좌하단
         ]
 
         # 각 모서리를 위도, 경도로 변환
@@ -70,10 +70,25 @@ def _get_real_cctv_coverage_data():
                 valid_corners += 1
             except Exception as e:
                 logger.error(f"좌표 변환 오류: {str(e)}")
-                # 실패시 기본값 사용
-                geo_corners.append([126.9783881, 37.5666102])
-                center_lat += 37.5666102
-                center_lon += 126.9783881
+                # 🆕 실패시 실제 CCTV 커버리지 좌표 사용
+                fallback_coords = [
+                    [126.73490515, 37.33878879],  # 좌상
+                    [126.73423283, 37.33918109],  # 우상
+                    [126.73488587, 37.33945957],  # 우하
+                    [126.73508427, 37.33934605]   # 좌하
+                ]
+                # corners 인덱스에 맞는 fallback 좌표 사용
+                corner_idx = len(geo_corners)
+                if corner_idx < len(fallback_coords):
+                    lon, lat = fallback_coords[corner_idx]
+                    geo_corners.append([lon, lat])  # GeoJSON 형식: [경도, 위도]
+                    center_lat += lat
+                    center_lon += lon
+                else:
+                    # 인덱스 초과시 기본 중심점 사용
+                    geo_corners.append([126.73475953, 37.33919387])
+                    center_lat += 37.33919387
+                    center_lon += 126.73475953
                 valid_corners += 1
 
         # 폴리곤을 닫기 위해 첫 번째 점을 마지막에 추가
@@ -85,7 +100,9 @@ def _get_real_cctv_coverage_data():
             center_lat /= valid_corners
             center_lon /= valid_corners
         else:
-            center_lat, center_lon = 37.5666102, 126.9783881
+            # 🆕 실제 CCTV 커버리지 중심점 사용 (4개 꼭짓점의 평균)
+            center_lat = (37.33878879 + 37.33918109 + 37.33945957 + 37.33934605) / 4  # 37.33919387
+            center_lon = (126.73490515 + 126.73423283 + 126.73488587 + 126.73508427) / 4  # 126.73475953
 
         # CCTV 데이터 형식으로 변환
         cctv_data = [{
@@ -106,22 +123,22 @@ def _get_real_cctv_coverage_data():
         
     except Exception as e:
         logger.error(f"실시간 CCTV 커버리지 생성 오류: {str(e)}")
-        # 오류 시 기본 샘플 데이터 반환
+        # 🆕 오류 시 실제 CCTV 커버리지 데이터 반환
         return [{
             "cctv_id": "cctv_001",
-            "name": "기본_커버리지",
+            "name": "기본_CCTV_커버리지",
             "location": {
-                "latitude": 37.5666102,
-                "longitude": 126.9783881
+                "latitude": 37.33919387,   # 중심점
+                "longitude": 126.73475953
             },
             "coverage_area": {
                 "type": "polygon", 
                 "coordinates": [[
-                    [126.9783881, 37.5666102],
-                    [126.9785881, 37.5666102],
-                    [126.9785881, 37.5668102],
-                    [126.9783881, 37.5668102],
-                    [126.9783881, 37.5666102]
+                    [126.73490515, 37.33878879],  # 좌상
+                    [126.73423283, 37.33918109],  # 우상
+                    [126.73488587, 37.33945957],  # 우하
+                    [126.73508427, 37.33934605],  # 좌하
+                    [126.73490515, 37.33878879]   # 폴리곤 닫기
                 ]]
             }
         }]
@@ -136,8 +153,8 @@ def update_location():
         "device_id": "device_1643095800_abc123def456",
         "timestamp": "2025-01-25T10:30:00.000Z",
         "location": {
-            "latitude": 37.5666102,
-            "longitude": 126.9783881
+            "latitude": 37.33919387,
+            "longitude": 126.73475953
         }
     }
     
@@ -439,8 +456,8 @@ def get_collision_warning():
     Request Body:
     {
         "device_id": "device_1643095800_abc123def456",
-        "latitude": 37.5666102,
-        "longitude": 126.9783881
+        "latitude": 37.33919387,
+        "longitude": 126.73475953
     }
     """
     try:
@@ -722,8 +739,8 @@ def _get_all_detected_objects(mobile_user_id=None):
                     'relativeDirection': relative_direction,
                     'distance_m': distance_m,
                     'coordinates': {
-                        'latitude': obj.get('coords', (0, 0))[0] if obj.get('coords') else 37.5666102,
-                        'longitude': obj.get('coords', (0, 0))[1] if obj.get('coords') else 126.9783881
+                        'latitude': obj.get('coords', (0, 0))[0] if obj.get('coords') else 37.33919387,
+                        'longitude': obj.get('coords', (0, 0))[1] if obj.get('coords') else 126.73475953
                     }
                 },
                 'motion': {
@@ -828,7 +845,7 @@ def _calculate_distance_from_coords(coords):
         lat, lon = coords
         # 사용자 위치와의 거리 계산 (간단한 구현)
         # 실제로는 device_manager에서 사용자 위치를 가져와서 계산해야 함
-        user_lat, user_lon = 37.5666102, 126.9783881  # 임시 사용자 위치
+        user_lat, user_lon = 37.33919387, 126.73475953  # 🆕 실제 CCTV 커버리지 중심점으로 업데이트
         
         # 간단한 거리 계산 (Haversine 공식 등 사용)
         import math

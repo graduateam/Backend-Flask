@@ -64,7 +64,11 @@ def register_blueprints(app):
     import os
     
     # 🎛️ 환경 변수로 웹 인터페이스 활성화 여부 결정
-    enable_web = os.environ.get('ENABLE_WEB_INTERFACE', 'false').lower() in ('true', '1', 't', 'yes')
+    web_env_value = os.environ.get('ENABLE_WEB_INTERFACE', 'false')
+    enable_web = web_env_value.lower() in ('true', '1', 't', 'yes')
+    
+    # 디버깅 로그
+    print(f"🔍 [DEBUG] ENABLE_WEB_INTERFACE = '{web_env_value}' → enable_web = {enable_web}")
     
     if enable_web:
         # 🌐 디버그/개발 모드: 웹 인터페이스 활성화 (비디오 확인용)

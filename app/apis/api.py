@@ -221,12 +221,12 @@ def get_video_bounds():
             width = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(video_processor.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # 비디오 프레임의 4개 모서리 좌표
+        # 🆕 실제 CCTV 커버리지 영역 좌표 (비디오 해상도 변경 반영)
         corners = [
-            (0, 0),
-            (width, 0),
-            (width, height),
-            (0, height)
+            (44, 43),    # 좌상단
+            (579, 45),   # 우상단
+            (580, 445),  # 우하단
+            (42, 446)    # 좌하단
         ]
 
         # 각 모서리를 위도, 경도로 변환
