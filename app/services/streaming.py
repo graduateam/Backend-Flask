@@ -148,7 +148,7 @@ class VideoStreamManager:
                 # 프레임 품질 조정
                 if self.quality == 'low':
                     # 저화질: 크기 축소 및 JPEG 품질 낮춤
-                    frame = cv2.resize(frame, (640, 360))
+                    # 원본 크기 480x360 그대로 사용 (리사이즈 제거)
                     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
                 else:
                     # 고화질: 원본 크기, 높은 JPEG 품질
