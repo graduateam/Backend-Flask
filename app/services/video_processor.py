@@ -349,7 +349,7 @@ class VideoProcessor:
                 elif self.current_source.startswith("camera_"):
                     frame = self.get_camera_frame(self.current_source)
                     if frame is None:
-                        empty_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                        empty_frame = np.zeros((360, 480, 3), dtype=np.uint8)
                         cv2.putText(
                             empty_frame,
                             f"{config.CAMERA_NAMES.get(self.current_source, self.current_source)} - 프레임 대기 중",
@@ -375,15 +375,16 @@ class VideoProcessor:
 
                 if not should_process:
                     simple_display = frame.copy()
-                    cv2.putText(
-                        simple_display,
-                        f"{time.strftime('%H:%M:%S')}",
-                        (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        (255, 255, 255),
-                        2
-                    )
+                    # 🚫 시간 표시 제거
+                    # cv2.putText(
+                    #     simple_display,
+                    #     f"{time.strftime('%H:%M:%S')}",
+                    #     (10, 30),
+                    #     cv2.FONT_HERSHEY_SIMPLEX,
+                    #     0.7,
+                    #     (255, 255, 255),
+                    #     2
+                    # )
                     video_stream.update(simple_display)
                     continue
 
@@ -394,16 +395,16 @@ class VideoProcessor:
                     # 바운딩 박스를 그릴 프레임 복사
                     display_frame = frame.copy()
 
-                    # 시간 및 위험도 정보 표시
-                    cv2.putText(
-                        display_frame,
-                        f"{time.strftime('%H:%M:%S')}",
-                        (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        (255, 255, 255),
-                        2
-                    )
+                    # 🚫 시간 표시 제거, 위험도 정보만 표시
+                    # cv2.putText(
+                    #     display_frame,
+                    #     f"{time.strftime('%H:%M:%S')}",
+                    #     (10, 30),
+                    #     cv2.FONT_HERSHEY_SIMPLEX,
+                    #     0.7,
+                    #     (255, 255, 255),
+                    #     2
+                    # )
 
                     # 위험도 요약 표시
                     if hasattr(self, 'risk_summary') and self.risk_summary:

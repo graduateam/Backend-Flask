@@ -75,7 +75,7 @@ class MapDataService:
             if frame is not None:
                 height, width = frame.shape[:2]
             else:
-                width, height = 640, 480
+                width, height = 480, 360
 
             # 프레임 모서리 좌표
             frame_corners = [

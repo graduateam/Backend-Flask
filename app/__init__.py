@@ -49,10 +49,9 @@ def register_extensions(app):
     Parameters:
     flask_app: Flask - Flask 애플리케이션 인스턴스
     """
-    # 🚫 Socket.IO 비활성화 (웹 실시간 통신 불필요, 모바일 성능 최적화)
+    # ✅ Socket.IO 활성화 (웹 지도 데이터 전송을 위해 필요)
     # Socket.IO 초기화
-    # socketio.init_app(app)
-    pass
+    socketio.init_app(app)
 
 def register_blueprints(app):
     """
@@ -91,8 +90,7 @@ def register_blueprints(app):
     register_mobile_api_blueprint(app)
 
 def register_socketio_handlers():
-    """Socket.IO 이벤트 핸들러 등록 - 모바일 최적화로 비활성화"""
-    # 🚫 Socket.IO 핸들러 비활성화 (웹 실시간 통신 불필요)
-    # from app.socket import events
-    # logger.info('Socket.IO 이벤트 핸들러 등록 완료')
-    pass
+    """Socket.IO 이벤트 핸들러 등록"""
+    # ✅ Socket.IO 핸들러 활성화 (웹 지도 데이터 전송을 위해 필요)
+    from app.socket import events
+    logger.info('Socket.IO 이벤트 핸들러 등록 완료')

@@ -53,7 +53,7 @@ def generate_frames():
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             else:
                 # 프레임이 없으면 빈 프레임 생성
-                empty_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                empty_frame = np.zeros((360, 480, 3), dtype=np.uint8)
                 cv2.putText(
                     empty_frame,
                     "비디오가 준비 중입니다...",

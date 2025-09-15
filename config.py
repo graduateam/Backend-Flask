@@ -26,7 +26,7 @@ WORLD_POINTS = [
 DEFAULT_MAP_CENTER = {"lat": WORLD_POINTS[0][0], "lng": WORLD_POINTS[0][1]}
 
 # YOLO 모델 경로
-MODEL_PATH = 'app/static/yolo_models/0317_best.pt'
+MODEL_PATH = 'app/static/yolo_models/train42_best.pt'
 
 # 카메라 소스 설정
 CAMERA_SOURCES = {

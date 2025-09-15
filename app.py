@@ -1,7 +1,8 @@
 """
 Flask 애플리케이션 실행 스크립트 - 모바일 API 최적화 모드
 """
-from app import create_app
+from app import create_app, socketio
+from app.socket.events import start_socket_update_thread
 import os
 
 if __name__ == '__main__':
@@ -30,4 +31,13 @@ if __name__ == '__main__':
         print("   ENABLE_WEB_INTERFACE=true python app.py")
     print("=" * 60)
     
-    app.run(host=host, port=port, debug=debug, threaded=True)
+    # Socket.IO 업데이트 스레드 시작 (웹 모드에서만)
+    if enable_web:
+        start_socket_update_thread(app)
+        print("🔗 Socket.IO 업데이트 스레드 시작됨")
+    
+    # Socket.IO와 함께 서버 시작
+    if enable_web:
+        socketio.run(app, host=host, port=port, debug=debug)
+    else:
+        app.run(host=host, port=port, debug=debug, threaded=True)
